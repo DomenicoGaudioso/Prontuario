@@ -6,20 +6,40 @@ st.set_page_config(page_title="Prontuario Strutturale", layout="wide")
 st.title("Prontuario delle Travi Semplici 🏗️")
 
 # --- SIDEBAR ---
-vincolo = st.sidebar.selectbox("Schema Statico dei Vincoli:", 
-    ["Appoggio - Appoggio", "Mensola", "Incastro - Appoggio", "Incastro - Incastro", 
-     "Arco a 3 Cerniere", "Arco a 2 Cerniere", "Cavo Sospeso", "Trave Continua"])
+# --- SIDEBAR E LOGICA DEI MENU DIPENDENTI ---
+# Dizionario che associa ad ogni vincolo solo i suoi carichi specifici
+MAPPA_SCHEMI = {
+    "Appoggio - Appoggio": [
+        "Uniformemente Distribuito", "Concentrato in Mezzeria", "Triangolare",
+        "Gradiente Termico", "Cedimento Appoggio Destro" # <-- AGGIUNTI QUI
+    ],
+    "Mensola": [
+        "Concentrato in Punta", "Uniformemente Distribuito", "Triangolare"
+    ],
+    "Incastro - Incastro": [
+        "Uniformemente Distribuito", "Concentrato in Mezzeria", 
+        "Gradiente Termico", "Cedimento Verticale Appoggio" # <-- GIÀ PRESENTI, ORA ORDINATI
+    ],
+    "Incastro - Incastro": [
+        "Uniformemente Distribuito", "Concentrato in Mezzeria", 
+        "Concentrato a distanza a", "Triangolare Max Sx", "Momento in Mezzeria",
+        "Gradiente Termico", "Cedimento Verticale Appoggio"
+    ],
+    "Arco a 3 Cerniere": ["Carico in Chiave"],
+    "Arco a 2 Cerniere": ["Carico in Chiave"],
+    "Cavo Sospeso": ["Carico Distribuito (Fune)"],
+    "Trave Continua": ["2 Campate con Carico Distribuito"]
+}
 
-carico = st.sidebar.selectbox("Tipologia di Carico/Azione:", 
-    ["Uniformemente Distribuito", "Concentrato in Mezzeria", "Concentrato in Punta", 
-     "Triangolare", "Concentrato a distanza a", "Momento in Appoggio", 
-     "Due carichi simmetrici", "Triangolare Simmetrico", "Momento in Punta", 
-     "Distribuito parziale", "Triangolare Max Punta", "Distribuito parziale sx", 
-     "Momento in Mezzeria", "Flessione Pura", "Triangolare Max Sx", 
-     "Trapezoidale", "Due carichi concentrati", 
-     "Carico in Chiave", "Gradiente Termico", "Cedimento Verticale Appoggio",
-     "Carico in Chiave", "Gradiente Termico", "Cedimento Verticale Appoggio", 
-     "Carico Distribuito (Fune)", "2 Campate con Carico Distribuito"])
+st.sidebar.header("Impostazioni Struttura")
+
+# Il primo menu seleziona il vincolo
+vincolo = st.sidebar.selectbox("Schema Statico dei Vincoli:", list(MAPPA_SCHEMI.keys()))
+
+# Il secondo menu legge cosa hai scelto nel primo e ti mostra solo le opzioni valide!
+carico = st.sidebar.selectbox("Tipologia di Carico/Azione:", MAPPA_SCHEMI[vincolo])
+
+st.sidebar.markdown("---")
 
 
 st.sidebar.markdown("---")
@@ -433,6 +453,30 @@ elif vincolo == "Trave Continua" and carico == "2 Campate con Carico Distribuito
         # La trave sarà lunga 2L in totale
         x_mm, V_n, M_nmm, theta_rad, v_mm = calc_trave_continua_2_campate(L_m*1000, q_kn, E, I)
         st.info("Nota: L'asse X del grafico mostrerà l'estensione totale (2L). L'appoggio centrale si trova esattamente a metà.")
+
+# --- APPOGGIO: GRADIENTE TERMICO ---
+elif vincolo == "Appoggio - Appoggio" and carico == "Gradiente Termico":
+    with col_teoria:
+        st.markdown(r"**Taglio e Momento:** $V(x) = 0 \quad M(x) = 0$")
+        st.markdown(r"**Deformata:** $v(x) = \frac{\alpha \Delta T}{2h} x(L-x)$")
+        st.info("💡 **Magia Isostatica:** Le variazioni termiche incurvano la trave (creano freccia) ma NON generano alcuno sforzo interno (coazione nulla). I grafici V e M saranno piatti!")
+    with col_input:
+        L_m = st.number_input("Luce L (m)", 4.0)
+        delta_T = st.number_input("Gradiente ΔT tra estradosso e intradosso (°C)", 30.0)
+        h_mm = st.number_input("Altezza sezione h (mm)", 300.0)
+        alpha = st.number_input("Coeff. termico α (1/°C)", value=1.2e-5, format="%.6f")
+        x_mm, V_n, M_nmm, theta_rad, v_mm = calc_appoggio_termico(L_m*1000, delta_T, h_mm, alpha, E, I)
+
+# --- APPOGGIO: CEDIMENTO VINCOLARE ---
+elif vincolo == "Appoggio - Appoggio" and carico == "Cedimento Appoggio Destro":
+    with col_teoria:
+        st.markdown(r"**Taglio e Momento:** $V(x) = 0 \quad M(x) = 0$")
+        st.markdown(r"**Deformata (Moto Rigido):** $v(x) = \delta \frac{x}{L}$")
+        st.info("💡 Un cedimento in una struttura isostatica provoca solo un moto rigido. La trave si inclina dritta ma non si flette, quindi non nascono sforzi.")
+    with col_input:
+        L_m = st.number_input("Luce L (m)", 4.0)
+        delta_mm = st.number_input("Cedimento verticale δ (mm)", 15.0)
+        x_mm, V_n, M_nmm, theta_rad, v_mm = calc_appoggio_cedimento(L_m*1000, delta_mm, E, I)
 
 # Caso non trovato
 else:

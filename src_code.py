@@ -193,8 +193,11 @@ def crea_4_grafici_plotly(x, V, M, theta, v):
 
     fig.add_trace(go.Scatter(x=x, y=V, fill='tozeroy', mode='lines', line=dict(color='red', width=2), fillcolor='rgba(255,0,0,0.3)', name='Taglio'), row=1, col=1)
     fig.add_trace(go.Scatter(x=x, y=M, fill='tozeroy', mode='lines', line=dict(color='blue', width=2), fillcolor='rgba(0,0,255,0.3)', name='Momento'), row=2, col=1)
-    fig.add_trace(go.Scatter(x=x, y=theta, mode='lines', line=dict(color='green', width=2), name='Rotazione'), row=3, col=1)
-    fig.add_trace(go.Scatter(x=x, y=v, mode='lines', line=dict(color='darkorange', width=2), fill='tozeroy', fillcolor='rgba(255,140,0,0.2)', name='Deformata'), row=4, col=1)
+    # Rotazione (Cambiata in Viola per distinguerla)
+    fig.add_trace(go.Scatter(x=x, y=theta, mode='lines', line=dict(color='purple', width=2), name='Rotazione'), row=3, col=1)
+    
+    # Deformata (Linea semplice Verde, senza fillcolor)
+    fig.add_trace(go.Scatter(x=x, y=v, mode='lines', line=dict(color='green', width=2), name='Deformata'), row=4, col=1)
 
     fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='black')
     fig.update_yaxes(autorange="reversed", row=2, col=1)
@@ -211,8 +214,12 @@ def calc_appoggio_concentrato_a(L, F, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, F*b/L, -F*a/L)
     M = np.where(x <= a, (F*b*x)/L, (F*a*(L-x))/L)
-    theta = np.zeros_like(x) # Omessa per brevità
-    v = np.zeros_like(x)     # Omessa per brevità
+    
+    # Equazione esatta della deformata a tratti
+    v = np.where(x <= a, 
+                 (F * b * x / (6 * L * EI)) * (L**2 - b**2 - x**2), 
+                 (F * a * (L - x) / (6 * L * EI)) * (L**2 - a**2 - (L - x)**2))
+    theta = np.zeros_like(x) # Lasciamo theta a 0 per brevità
     return x, V, M, theta, v
 
 # 12. Appoggio-Appoggio: Momento concentrato M0 nell'estremo A
@@ -251,8 +258,12 @@ def calc_mensola_concentrato_a(L, F, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, F, 0)
     M = np.where(x <= a, -F*(a - x), 0)
-    theta = np.where(x <= a, (F/(2*EI))*(2*a*x - x**2), (F*a**2)/(2*EI))
-    v = np.where(x <= a, (F*x**2/(6*EI))*(3*a - x), (F*a**2/(6*EI))*(3*x - a))
+    
+    # Equazione esatta della deformata a tratti
+    v = np.where(x <= a, 
+                 (F * x**2 / (6 * EI)) * (3*a - x), 
+                 (F * a**2 / (6 * EI)) * (3*x - a))
+    theta = np.zeros_like(x)
     return x, V, M, theta, v
 
 # 16. Mensola: Momento M0 applicato in punta
@@ -262,6 +273,7 @@ def calc_mensola_momento_punta(L, M0, E, I):
     V = np.zeros_like(x)
     M = np.full_like(x, -M0)
     theta = (M0 * x) / EI
+    # Equazione parabolica esatta
     v = (M0 * x**2) / (2 * EI)
     return x, V, M, theta, v
 
@@ -539,22 +551,44 @@ def calc_cavo_parabolico(L, f_sag, q, E, A):
 # 36. Trave Continua su 3 appoggi (2 campate identiche di luce L)
 def calc_trave_continua_2_campate(L, q, E, I):
     EI = E * I
-    # Attenzione: l'asse x totale sarà lungo 2*L
     L_tot = 2 * L
     x = np.linspace(0, L_tot, 500)
     
-    # Reazioni vincolari classiche
     R_A = (3 * q * L) / 8
-    R_B = (10 * q * L) / 8 # Appoggio centrale
-    R_C = (3 * q * L) / 8
+    R_B = (10 * q * L) / 8
     
-    # Taglio piecewise
     V = np.where(x < L, R_A - q*x, R_A + R_B - q*x)
-    
-    # Momento piecewise (Il momento sul supporto centrale B sarà -qL^2 / 8)
     M = np.where(x <= L, R_A*x - q*x**2/2, R_A*x + R_B*(x-L) - q*x**2/2)
     
+    # Deformata esatta per la campata continua
+    v = np.where(x <= L,
+                 (q * x / (48 * EI)) * (L**3 - 3*L*x**2 + 2*x**3),
+                 (q * (L_tot - x) / (48 * EI)) * (L**3 - 3*L*(L_tot - x)**2 + 2*(L_tot - x)**3))
     theta = np.zeros_like(x)
-    v = np.zeros_like(x)
     return x, V, M, theta, v
 
+# ==========================================
+# CALCOLO TERMICO E CEDIMENTI (ISOSTATICI)
+# ==========================================
+
+# Trave appoggiata con gradiente termico (Isostatica)
+def calc_appoggio_termico(L, deltaT, h, alpha, E, I):
+    x = np.linspace(0, L, 500)
+    V = np.zeros_like(x) # Nessun taglio
+    M = np.zeros_like(x) # Nessun momento
+    
+    # Curvatura termica costante. La deformata è una parabola esatta.
+    v = (alpha * deltaT / (2 * h)) * x * (L - x)
+    theta = (alpha * deltaT / (2 * h)) * (L - 2 * x)
+    return x, V, M, theta, v
+
+# Trave appoggiata con cedimento dell'appoggio destro (Isostatica)
+def calc_appoggio_cedimento(L, delta, E, I):
+    x = np.linspace(0, L, 500)
+    V = np.zeros_like(x) # Nessun sforzo
+    M = np.zeros_like(x)
+    
+    # Moto rigido: la trave si inclina ma non si flette. È una linea retta.
+    v = delta * (x / L)
+    theta = np.full_like(x, delta / L)
+    return x, V, M, theta, v
