@@ -103,88 +103,171 @@ def calc_incastro_incastro_concentrato(L, F, E, I): # In mezzeria
 # ==========================================
 # 2. FUNZIONI GRAFICHE PLOTLY
 # ==========================================
-def disegna_schema_statico(vincolo, carico, L_m):
+def disegna_schema_statico(vincolo, carico, L_m, L1_m=0.0, L2_m=0.0, a_m=0.0, f_m=0.0):
     fig = go.Figure()
     
-    # 1. Imposto la lunghezza visiva (per la trave continua disegno 2 campate)
-    L_draw = L_m * 2 if vincolo == "Trave Continua" else L_m
-
-    # 2. Disegno l'elemento strutturale principale
+    # 1. Determino la lunghezza visiva totale
+    L_draw = L_m
+    appoggi = [] 
+    
+    if vincolo == "Trave Continua":
+        if "3 Campate" in carico:
+            L_draw = L_m * 3
+            appoggi = [0, L_m, L_m*2, L_m*3]
+        elif "Diverse" in carico:
+            L_draw = L1_m + L2_m if (L1_m + L2_m) > 0 else 10
+            appoggi = [0, L1_m, L_draw]
+        else: # 2 campate uguali
+            L_draw = L_m * 2
+            appoggi = [0, L_m, L_draw]
+    
+    # Gestione limiti Y per non "schiacciare" archi molto alti
+    y_max, y_min = 1.0, -1.0
+    
+    # 2. Disegno l'elemento strutturale
     if "Arco" in vincolo or "Cavo" in vincolo:
-        # Disegno un arco o una fune parabolica fittizia
-        x_curve = np.linspace(0, L_draw, 50)
-        y_curve = -0.4 * np.sin(np.pi * x_curve / L_draw) if "Cavo" in vincolo else 0.6 * np.sin(np.pi * x_curve / L_draw)
+        h = f_m if f_m > 0 else L_draw * 0.2
+        if "Cavo" in vincolo: h = -h
+        
+        x_curve = np.linspace(0, L_draw, 100)
+        # Parabola esatta adattata al tuo input f_m
+        y_curve = (4 * h / L_draw**2) * x_curve * (L_draw - x_curve)
+        
         fig.add_trace(go.Scatter(x=x_curve, y=y_curve, mode='lines', line=dict(color='black', width=5), showlegend=False))
-        # La linea di base dritta tratteggiata per gli archi
         fig.add_shape(type="line", x0=0, y0=0, x1=L_draw, y1=0, line=dict(color="gray", width=2, dash="dash"))
+        
+        # PALLINO BIANCO per Arco a 3 cerniere
+        if vincolo == "Arco a 3 Cerniere":
+            raggio = L_draw * 0.015
+            fig.add_shape(type="circle", x0=L_draw/2 - raggio, y0=h - raggio, x1=L_draw/2 + raggio, y1=h + raggio, fillcolor="white", line_color="black", line_width=2)
+        
+        y_max = max(1.0, h + 0.5)
+        y_min = min(-1.0, h - 0.5)
     else:
-        # Trave dritta standard
         fig.add_shape(type="line", x0=0, y0=0, x1=L_draw, y1=0, line=dict(color="black", width=6))
 
     # 3. Disegno i Vincoli
-    if vincolo == "Appoggio - Appoggio" or "Arco" in vincolo or "Cavo" in vincolo:
-        fig.add_shape(type="path", path="M -0.1 -0.5 L 0.1 -0.5 L 0 0 Z", fillcolor="gray", line_color="black")
-        fig.add_shape(type="path", path=f"M {L_draw-0.1} -0.5 L {L_draw+0.1} -0.5 L {L_draw} 0 Z", fillcolor="gray", line_color="black")
+    if vincolo in ["Appoggio - Appoggio", "Arco a 2 Cerniere", "Arco a 3 Cerniere", "Cavo Sospeso"]:
+        appoggi = [0, L_draw]
     elif vincolo == "Mensola":
         fig.add_shape(type="rect", x0=-L_draw*0.05, y0=-0.6, x1=0, y1=0.6, fillcolor="gray", line_color="black")
-    elif vincolo == "Incastro - Appoggio":
+    elif "Incastro - Appoggio" in vincolo:
         fig.add_shape(type="rect", x0=-L_draw*0.05, y0=-0.6, x1=0, y1=0.6, fillcolor="gray", line_color="black")
-        fig.add_shape(type="path", path=f"M {L_draw-0.1} -0.5 L {L_draw+0.1} -0.5 L {L_draw} 0 Z", fillcolor="gray", line_color="black")
+        appoggi = [L_draw]
     elif vincolo == "Incastro - Incastro":
         fig.add_shape(type="rect", x0=-L_draw*0.05, y0=-0.6, x1=0, y1=0.6, fillcolor="gray", line_color="black")
         fig.add_shape(type="rect", x0=L_draw, y0=-0.6, x1=L_draw*1.05, y1=0.6, fillcolor="gray", line_color="black")
-    elif vincolo == "Trave Continua":
-        # Disegno 3 appoggi (inizio, centro, fine)
-        for pos in [0, L_m, L_draw]:
-            fig.add_shape(type="path", path=f"M {pos-0.1} -0.5 L {pos+0.1} -0.5 L {pos} 0 Z", fillcolor="gray", line_color="black")
+    elif vincolo == "Ponte Sospeso":
+        pylon_h = f_m if f_m > 0 else L_draw * 0.25
+        # Piloni
+        fig.add_shape(type="line", x0=0, y0=-0.5, x1=0, y1=pylon_h, line=dict(color="black", width=4))
+        fig.add_shape(type="line", x0=L_draw, y0=-0.5, x1=L_draw, y1=pylon_h, line=dict(color="black", width=4))
+        # Impalcato
+        fig.add_shape(type="line", x0=0, y0=0, x1=L_draw, y1=0, line=dict(color="black", width=6))
+        # Fune Parabolica
+        x_curve = np.linspace(0, L_draw, 100)
+        y_curve = pylon_h - (4 * pylon_h / L_draw**2) * x_curve * (L_draw - x_curve)
+        fig.add_trace(go.Scatter(x=x_curve, y=y_curve, mode='lines', line=dict(color='black', width=3), showlegend=False))
+        # Pendini
+        n_camp = int(L1_m) if L1_m > 0 else 6
+        for i in range(1, n_camp):
+            xh = i * (L_draw / n_camp)
+            yh = pylon_h - (4 * pylon_h / L_draw**2) * xh * (L_draw - xh)
+            fig.add_shape(type="line", x0=xh, y0=0, x1=xh, y1=yh, line=dict(color="gray", width=1))
+        appoggi = [0, L_draw]
+        y_max = max(1.0, pylon_h + 0.5)
+    elif vincolo == "Mensola (Urto Dinamico)": # <-- MODIFICATO
+        fig.add_shape(type="rect", x0=-L_draw*0.05, y0=-0.6, x1=0, y1=0.6, fillcolor="gray", line_color="black")
+    elif vincolo == "Trave Gerber": # <-- NUOVO
+        # Due appoggi per la trave principale, uno per quella sospesa
+        appoggi = [0, L1_m, L_draw]
+        # PALLINO BIANCO per la cerniera Gerber (tra L1 e l'ultimo appoggio)
+        raggio = L_draw * 0.015
+        fig.add_shape(type="circle", x0=(L1_m+L2_m)-raggio, y0=-raggio, x1=(L1_m+L2_m)+raggio, y1=+raggio, fillcolor="white", line_color="black", line_width=2) 
 
-    # 4. Disegno i Carichi Visivi (La parte che volevi indietro!)
-    
-    # -> CARICHI DISTRIBUITI (Rettangolo azzurro con frecce)
-    if "Distribuito" in carico or "Fune" in carico:
-        estensione = L_draw / 2 if "parziale" in carico else L_draw
-        fig.add_shape(type="rect", x0=0, y0=0, x1=estensione, y1=0.4, fillcolor="rgba(30, 144, 255, 0.2)", line_color="blue")
-        for x_arrow in np.linspace(0.1 * estensione, 0.9 * estensione, 7):
-            fig.add_annotation(x=x_arrow, y=0, ax=x_arrow, ay=0.4, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowcolor="blue")
+    elif vincolo == "Ponte ad Arco a Spinta Eliminata" or vincolo == "Ponte Langer":
+        arch_h = f_m if f_m > 0 else L_draw * 0.25
+        # Impalcato (Catena)
+        fig.add_shape(type="line", x0=0, y0=0, x1=L_draw, y1=0, line=dict(color="black", width=6))
+        # Arco Parabolico
+        x_curve = np.linspace(0, L_draw, 100)
+        y_curve = (4 * arch_h / L_draw**2) * x_curve * (L_draw - x_curve)
+        fig.add_trace(go.Scatter(x=x_curve, y=y_curve, mode='lines', line=dict(color='black', width=4), showlegend=False))
+        # Pendini
+        n_camp = int(L1_m) if L1_m > 0 else 6
+        for i in range(1, n_camp):
+            xh = i * (L_draw / n_camp)
+            yh = (4 * arch_h / L_draw**2) * xh * (L_draw - xh)
+            fig.add_shape(type="line", x0=xh, y0=0, x1=xh, y1=yh, line=dict(color="gray", width=1))
+        # Appoggi (di cui uno carrello perché la spinta è interna)
+        appoggi = [0, L_draw]
+        y_max = max(1.0, arch_h + 0.5)   
 
-    # -> CARICHI TRIANGOLARI / TRAPEZOIDALI (Poligono azzurro)
+    for pos in appoggi:
+        base = L_draw * 0.02 # I triangolini scalano con la lunghezza della trave
+        fig.add_shape(type="path", path=f"M {pos-base} -0.5 L {pos+base} -0.5 L {pos} 0 Z", fillcolor="gray", line_color="black")
+
+    # 4. Disegno i Carichi Visivi alle coordinate esatte
+    if "Distribuito" in carico or "Fune" in carico or "Uniforme" in carico or "Totale" in carico or "Metà" in carico:
+        x_start, x_end = 0, L_draw
+        if "parziale" in carico or "Metà" in carico:
+            if "sx" in carico or "Metà" in carico: x_end = a_m if a_m > 0 else L_draw/2
+            else: x_start = a_m if a_m > 0 else L_draw/2
+        elif "campata 1" in carico:
+            x_end = L_m
+            
+        fig.add_shape(type="rect", x0=x_start, y0=0, x1=x_end, y1=0.4, fillcolor="rgba(30, 144, 255, 0.2)", line_color="blue")
+        
+        n_arrows = max(3, int((x_end - x_start) / (L_draw / 10 + 1e-5)))
+        for x_arrow in np.linspace(x_start + (x_end-x_start)*0.05, x_end - (x_end-x_start)*0.05, n_arrows):
+            fig.add_annotation(x=x_arrow, y=0, ax=x_arrow, ay=0.4, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowcolor="blue")
+
     elif "Triangolare" in carico or "Trapezoidale" in carico:
-        if "Sx" in carico:
-            path = f"M 0 0 L 0 0.5 L {L_draw} 0 Z"
-        elif "Punta" in carico and vincolo == "Mensola":
-             path = f"M 0 0 L {L_draw} 0.5 L {L_draw} 0 Z"
-        elif "Trapezoidale" in carico:
-             path = f"M 0 0 L 0 0.5 L {L_draw} 0.2 L {L_draw} 0 Z"
-        else:
-             path = f"M 0 0 L {L_draw/2} 0.5 L {L_draw} 0 Z" # Simmetrico
-        
+        if "Sx" in carico: path = f"M 0 0 L 0 0.5 L {L_draw} 0 Z"
+        elif "Punta" in carico and vincolo == "Mensola": path = f"M 0 0 L {L_draw} 0.5 L {L_draw} 0 Z"
+        elif "Trapezoidale" in carico: path = f"M 0 0 L 0 0.5 L {L_draw} 0.2 L {L_draw} 0 Z"
+        else: path = f"M 0 0 L {L_draw/2} 0.5 L {L_draw} 0 Z"
         fig.add_shape(type="path", path=path, fillcolor="rgba(30, 144, 255, 0.2)", line_color="blue")
-        fig.add_annotation(x=L_draw/3, y=0, ax=L_draw/3, ay=0.3, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowcolor="blue")
 
-    # -> CARICHI CONCENTRATI (Freccia grossa rossa)
     elif "Concentrato" in carico or "Chiave" in carico:
-        pos_x = L_draw / 2 # Default in mezzo
+        pos_x = L_draw / 2 
         if "Punta" in carico: pos_x = L_draw
-        elif "a distanza" in carico: pos_x = L_draw * 0.33 # Puramente visivo
+        elif "a distanza" in carico: pos_x = a_m if a_m > 0 else L_draw/2
+        elif "campata 1" in carico: pos_x = L_m / 2
         
-        fig.add_annotation(x=pos_x, y=0, ax=pos_x, ay=0.7, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor="red")
+        pos_y = 0
+        if "Arco" in vincolo and "Chiave" in carico:
+            pos_y = f_m if f_m > 0 else L_draw * 0.2
+        elif "Urto" in carico:
+            # Disegna un blocco che cade
+            fig.add_shape(type="rect", x0=L_draw-0.5, y0=0.5, x1=L_draw+0.5, y1=1.2, fillcolor="orange", line_color="red")
+            fig.add_annotation(x=L_draw, y=0, ax=L_draw, ay=0.5, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=2, arrowcolor="red")
+            fig.add_annotation(x=L_draw/2, y=0.5, text="💥 URTO DINAMICO", showarrow=False, font=dict(size=14, color="red", weight="bold"))
+            
+        fig.add_annotation(x=pos_x, y=pos_y, ax=pos_x, ay=pos_y+0.7, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor="red")
         
-        if "Due" in carico: # Se ci sono due carichi (simmetrici o a sbalzo)
-            pos_x2 = L_draw * 0.66 if "simmetrici" in carico else L_draw
-            fig.add_annotation(x=pos_x2, y=0, ax=pos_x2, ay=0.7, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor="red")
+        if "Due" in carico: 
+            if "simmetrici" in carico:
+                pos_x1 = a_m if a_m > 0 else L_draw/4
+                pos_x2 = L_draw - pos_x1
+            else:
+                pos_x1 = a_m if a_m > 0 else L_draw/2
+                pos_x2 = L_draw
+            fig.add_annotation(x=pos_x1, y=0, ax=pos_x1, ay=0.7, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor="red")
+            if pos_x2 != pos_x1:
+                fig.add_annotation(x=pos_x2, y=0, ax=pos_x2, ay=0.7, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor="red")
 
-    # -> AZIONI SPECIALI (Momenti, Termica, Cedimenti)
-    elif "Momento" in carico or "Flessione" in carico or "Termico" in carico or "Cedimento" in carico:
+    elif "Momento" in carico or "Termico" in carico or "Cedimento" in carico:
          icona = "🌡️" if "Termico" in carico else "📉" if "Cedimento" in carico else "🔄"
-         fig.add_annotation(x=L_draw/2, y=0.5, text=f"{icona} {carico}", showarrow=False, font=dict(size=14, color="purple"))
+         pos_x = L_draw / 2
+         if "Appoggio" in carico and "Incastro" in vincolo: pos_x = L_draw
+         elif "Punta" in carico: pos_x = L_draw
+         elif "A" in carico: pos_x = 0
+         fig.add_annotation(x=pos_x, y=0.5, text=f"{icona} {carico}", showarrow=False, font=dict(size=14, color="purple"))
 
-    # 5. Pulizia del grafico
-    fig.update_layout(
-        xaxis=dict(range=[-L_draw*0.1, L_draw*1.1], visible=False),
-        yaxis=dict(range=[-1.0, 1.0], visible=False),
-        height=180, margin=dict(l=0, r=0, t=10, b=10),
-        plot_bgcolor="white"
-    )
+    fig.update_layout(xaxis=dict(range=[-L_draw*0.05, L_draw*1.05], visible=False), 
+                      yaxis=dict(range=[y_min, y_max], visible=False), 
+                      height=180, margin=dict(l=0, r=0, t=10, b=10), plot_bgcolor="white")
     return fig
 
 def crea_4_grafici_plotly(x, V, M, theta, v):
@@ -592,3 +675,275 @@ def calc_appoggio_cedimento(L, delta, E, I):
     v = delta * (x / L)
     theta = np.full_like(x, delta / L)
     return x, V, M, theta, v
+
+# 37. Trave Continua a 2 Campate DIVERSE (L1, L2) con carico uniforme totale
+def calc_continua_2_campate_diverse_q(L1, L2, q, E, I):
+    L_tot = L1 + L2
+    x = np.linspace(0, L_tot, 500)
+    
+    # Momento sull'appoggio centrale B (Teorema di Clapeyron)
+    M_B = - (q * (L1**3 + L2**3)) / (8 * (L1 + L2))
+    
+    # Reazioni vincolari
+    R_A = (q * L1 / 2) + (M_B / L1)
+    V_B_sx = (q * L1 / 2) - (M_B / L1)
+    V_B_dx = (q * L2 / 2) - (M_B / L2)
+    R_C = (q * L2 / 2) + (M_B / L2)
+    R_B = V_B_sx + V_B_dx
+    
+    V = np.where(x < L1, R_A - q*x, R_A + R_B - q*x)
+    M = np.where(x <= L1, R_A*x - q*x**2/2, R_A*x + R_B*(x-L1) - q*x**2/2)
+    
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v
+
+# 38. Trave Continua a 2 Campate UGUALI (L), carico uniforme SOLO sulla prima campata
+def calc_continua_2_campate_q_parziale(L, q, E, I):
+    L_tot = 2 * L
+    x = np.linspace(0, L_tot, 500)
+    
+    M_B = - (q * L**2) / 16
+    R_A = (7 * q * L) / 16
+    R_B = (10 * q * L) / 16
+    R_C = - (q * L) / 16
+    
+    # Il taglio nella campata 2 è costante pari a R_C
+    V = np.where(x < L, R_A - q*x, R_A + R_B - q*L)
+    M = np.where(x <= L, R_A*x - q*x**2/2, M_B - R_C*(x-L))
+    
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v
+
+# 39. Trave Continua a 2 Campate UGUALI (L), carico concentrato F in mezzeria della prima campata
+def calc_continua_2_campate_F_mezzeria(L, F, E, I):
+    L_tot = 2 * L
+    x = np.linspace(0, L_tot, 500)
+    
+    M_B = - (3 * F * L) / 32
+    R_A = (13 * F) / 32
+    R_B = (22 * F) / 32
+    R_C = - (3 * F) / 32
+    
+    V = np.where(x < L/2, R_A, np.where(x < L, R_A - F, -R_C))
+    M = np.where(x <= L/2, R_A*x, np.where(x <= L, R_A*x - F*(x - L/2), M_B - R_C*(x-L)))
+    
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v
+
+# 40. Trave Continua a 3 Campate UGUALI (L), carico uniforme totale
+def calc_continua_3_campate_q(L, q, E, I):
+    L_tot = 3 * L
+    x = np.linspace(0, L_tot, 500)
+    
+    M_B = - (q * L**2) / 10
+    M_C = M_B
+    R_A = 0.4 * q * L
+    R_B = 1.1 * q * L
+    R_C = 1.1 * q * L
+    R_D = 0.4 * q * L
+    
+    V = np.where(x < L, R_A - q*x, np.where(x < 2*L, R_A + R_B - q*x, R_A + R_B + R_C - q*x))
+    M = np.where(x <= L, R_A*x - q*x**2/2, np.where(x <= 2*L, R_A*x + R_B*(x-L) - q*x**2/2, R_A*x + R_B*(x-L) + R_C*(x-2*L) - q*x**2/2))
+    
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v
+
+# ==========================================
+# PONTI SOSPESI E ARCHI A SPINTA ELIMINATA
+# ==========================================
+
+def calc_ponte_sospeso(L, f_sag, q, n_campate, E, I):
+    # n_campate è il numero di intervalli tra le sospensioni
+    L1 = L / n_campate
+    
+    # Formule globali della Fune (dai dati dell'immagine)
+    H = (q * L**2) / (8 * f_sag)
+    V_reaz = (q * L) / 2
+    T_max = np.sqrt(H**2 + V_reaz**2)
+    
+    # Sforzo di trazione su singola sospensione S
+    S = q * L1
+    
+    # Array per i grafici dell'impalcato
+    x = np.linspace(0, L, 500)
+    V = np.zeros_like(x)
+    M = np.zeros_like(x)
+    
+    # Calcolo dei grafici "Locali" dell'impalcato (concio L1)
+    for i in range(int(n_campate)):
+        x_start = i * L1
+        x_end = (i + 1) * L1
+        mask = (x >= x_start) & (x <= x_end)
+        x_local = x[mask] - x_start
+        
+        # Taglio locale: zero in mezzeria, massimo sugli appoggi (pendini)
+        V[mask] = (q * L1 / 2) - q * x_local
+        # Momento locale: M_incastro = qL1^2/12 (come da immagine)
+        M[mask] = (q * L1 * x_local / 2) - (q * x_local**2 / 2) - (q * L1**2 / 12)
+
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v, H, T_max, S
+
+def calc_arco_spinta_eliminata(L, f_arco, q, n_campate, E, I):
+    L1 = L / n_campate
+    
+    # La spinta H è interamente assorbita dall'impalcato che funge da tirante (catena)
+    H = (q * L**2) / (8 * f_arco) 
+    
+    # Sforzo di trazione su singolo pendino S
+    S = q * L1
+    
+    x = np.linspace(0, L, 500)
+    V = np.zeros_like(x)
+    M = np.zeros_like(x)
+    
+    # Calcolo dei grafici Locali dell'impalcato (come per il ponte sospeso)
+    for i in range(int(n_campate)):
+        x_start = i * L1
+        x_end = (i + 1) * L1
+        mask = (x >= x_start) & (x <= x_end)
+        x_local = x[mask] - x_start
+        
+        V[mask] = (q * L1 / 2) - q * x_local
+        M[mask] = (q * L1 * x_local / 2) - (q * x_local**2 / 2) - (q * L1**2 / 12)
+
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    return x, V, M, theta, v, H, S
+
+# 43. PONTE LANGER (Carico Totale)
+def calc_ponte_langer_totale(L, f, q, E, I):
+    # Con carico totale uniforme, l'arco parabolico è funicolare del carico.
+    # Spinta massima, Momento flettente teorico macroscopico nullo.
+    H = (q * L**2) / (8 * f)
+    x = np.linspace(0, L, 500)
+    
+    V = np.zeros_like(x)
+    M = np.zeros_like(x)
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    
+    return x, V, M, theta, v, H
+
+# 44. PONTE LANGER (Carico su Metà Luce)
+def calc_ponte_langer_meta(L, f, q, E, I):
+    # La spinta H è dimezzata rispetto al carico totale
+    H = (q * L**2) / (16 * f)
+    x = np.linspace(0, L, 500)
+    
+    # Reazioni e Taglio/Momento Isostatici (come trave appoggiata con carico a metà)
+    R_A = (3 * q * L) / 8
+    R_B = (q * L) / 8
+    
+    V_iso = np.where(x < L/2, R_A - q*x, -R_B)
+    M_iso = np.where(x <= L/2, R_A*x - q*x**2/2, R_B*(L-x))
+    
+    # Geometria dell'arco parabolico e sua derivata (inclinazione)
+    y = (4 * f / L**2) * x * (L - x)
+    y_prime = (4 * f / L**2) * (L - 2*x)
+    
+    # Gli sforzi flettenti e taglianti passano interamente all'elemento rigido
+    # (Catena rigida o Arco rigido)
+    V = V_iso - H * y_prime
+    M = M_iso - H * y
+    
+    theta = np.zeros_like(x)
+    v = np.zeros_like(x)
+    
+    return x, V, M, theta, v, H
+
+# ==========================================
+# CATEGORIE SPECIALI (GERBER, URTI, ROTAZIONI, FUNI SFALSATE)
+# ==========================================
+
+# 45. TRAVE GERBER (Appoggio, Appoggio, Sbalzo con Cerniera, Appoggio)
+def calc_gerber_standard(L1, L2, L3, q, E, I):
+    # L1 = luce prima campata, L2 = sbalzo fino alla cerniera, L3 = campata sospesa
+    L_tot = L1 + L2 + L3
+    x = np.linspace(0, L_tot, 500)
+    
+    # 1. Risolvo la campata sospesa (isostatica appoggiata sulla cerniera e sul rullo finale)
+    V_cerniera = (q * L3) / 2  # Reazione trasmessa allo sbalzo
+    R_D = (q * L3) / 2         # Reazione appoggio finale
+    
+    # 2. Risolvo la trave principale con lo sbalzo (che ora subisce q + il carico concentrato V_cerniera)
+    # Equilibrio alla rotazione in A per trovare R_B:
+    R_B = (q * (L1 + L2)**2 / 2 + V_cerniera * (L1 + L2)) / L1
+    R_A = q * (L1 + L2) + V_cerniera - R_B
+    
+    # 3. Costruisco le equazioni a tratti
+    V = np.where(x < L1, R_A - q*x, 
+                 np.where(x < L1 + L2, R_A + R_B - q*x, 
+                          V_cerniera - q*(x - (L1+L2))))
+    
+    M = np.where(x < L1, R_A*x - q*x**2/2, 
+                 np.where(x <= L1 + L2, R_A*x + R_B*(x-L1) - q*x**2/2, 
+                          V_cerniera*(x - (L1+L2)) - q*(x - (L1+L2))**2/2))
+    
+    theta, v = np.zeros_like(x), np.zeros_like(x)
+    return x, V, M, theta, v
+
+# 46. URTO SU MENSOLA (Massa M che cade da altezza h in punta)
+def calc_urto_mensola(L, massa_kg, h_caduta, E, I):
+    g = 9.81
+    Forza_statica = massa_kg * g
+    
+    # Spostamento statico in punta
+    v_st = (Forza_statica * L**3) / (3 * E * I)
+    
+    # Coefficiente di Amplificazione Dinamica (K_d)
+    K_d = 1 + np.sqrt(1 + (2 * h_caduta) / v_st)
+    
+    # Forza Dinamica Equivalente
+    F_eq = Forza_statica * K_d
+    
+    x = np.linspace(0, L, 500)
+    V = np.full_like(x, F_eq)
+    M = -F_eq * (L - x)
+    
+    theta = (F_eq / (2 * E * I)) * (2*L*x - x**2)
+    v = (F_eq * x**2 / (6 * E * I)) * (3*L - x)
+    
+    return x, V, M, theta, v, K_d, F_eq
+
+# 47. INCASTRO-APPOGGIO CON ROTAZIONE IMPOSITA ALL'INCASTRO
+def calc_incastro_appoggio_rotazione(L, phi_rad, E, I):
+    # phi_rad positivo = rotazione antioraria dell'incastro
+    x = np.linspace(0, L, 500)
+    
+    M_A = (3 * E * I * phi_rad) / L
+    R_A = -(3 * E * I * phi_rad) / L**2
+    R_B = (3 * E * I * phi_rad) / L**2
+    
+    V = np.full_like(x, R_A)
+    M = M_A + R_A * x
+    
+    theta = phi_rad * (1 - 4*(x/L) + 3*(x/L)**2)
+    v = phi_rad * x * (1 - x/L)**2
+    
+    return x, V, M, theta, v
+
+# 48. FUNE SOSPESA CON APPOGGI SFALSATI (Dislivello h)
+def calc_fune_sfalsata(L, f_sag, dislivello_h, q, E, A):
+    # Il dislivello h altera le reazioni verticali ma non la spinta orizzontale
+    H = (q * L**2) / (8 * f_sag)
+    
+    x = np.linspace(0, L, 500)
+    
+    # V rappresenta la componente verticale della trazione
+    V_verticale = (q * L / 2) - H * (dislivello_h / L) - q * x
+    T_trazione = np.sqrt(H**2 + V_verticale**2)
+    
+    V = V_verticale
+    M = np.zeros_like(x)
+    theta = np.zeros_like(x)
+    
+    # Geometria della fune
+    v = (dislivello_h / L) * x + (q * x * (L - x)) / (2 * H)
+    
+    return x, V, M, theta, v, H, T_trazione
