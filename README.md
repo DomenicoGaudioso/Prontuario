@@ -1,4 +1,4 @@
-# 🏗️ Prontuario Interattivo delle Travi Semplici
+# 🏗️ Prontuario Interattivo
 
 Un'applicazione web open-source sviluppata in **Python** e **Streamlit** dedicata al calcolo strutturale rapido. 
 
