@@ -1,4 +1,6 @@
-# 🏗️ Prontuario Interattivo
+# 🏗️ Prontuario Web
+
+<img width="1456" height="720" alt="logoProntuario" src="https://github.com/user-attachments/assets/cea9c3c0-01ff-4d53-b5b6-a4def7554fb0" />
 
 Un'applicazione web open-source sviluppata in **Python** e **Streamlit** dedicata al calcolo strutturale rapido. 
 
