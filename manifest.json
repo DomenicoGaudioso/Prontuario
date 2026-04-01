@@ -1,0 +1,14 @@
+{
+  "name": "prontuario",
+  "build_context": "Prontuario",
+  "icon": "book-search",
+  "title": {
+    "en": "Handbook",
+    "it": "Prontuario"
+  },
+  "description": {
+    "en": "A web application for the rapid calculation of beams based on formulations known from the technical literature. It analyzes static patterns and provides stresses and displacements.",
+    "it": "Applicativo Web per il calcolo rapido di travi basandosi sulle formulazioni note da letteratura tecnica. Analizza schemi statici e fornisce sollecitazioni e spostamenti."
+  },
+  "required_subscription": "free"
+}
