@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Trave appoggiata con carico triangolare (max in B)",
+    "norma": "Meccanica delle Strutture",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 6.0,
+    "q": 12.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_A": {
+      "valore": 12.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Reazione A = q*L/6 = 12*6/6 = 12 kN"
+    },
+    "R_B": {
+      "valore": 24.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Reazione B = q*L/3 = 12*6/3 = 24 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave SS con carico triangolare (max in B), L=6m, q_max=12 kN/m. R_A=qL/6=12, R_B=qL/3=24."
+}

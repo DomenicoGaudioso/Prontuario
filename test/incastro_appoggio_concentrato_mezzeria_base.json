@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "verifica": "Incastro-appoggio con carico concentrato in mezzeria",
+    "norma": "Meccanica delle Strutture",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 5.0,
+    "F": 50.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_appoggio_B": {
+      "valore": 34.375,
+      "unita": "kN",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Reazione B = 11*F/16 = 11*50/16 = 34.375 kN"
+    },
+    "R_incastro_A": {
+      "valore": 15.625,
+      "unita": "kN",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Reazione A = 5*F/16 = 5*50/16 = 15.625 kN"
+    },
+    "M_incastro": {
+      "valore": 37.5,
+      "unita": "kNm",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Momento all'incastro = -3*F*L/16 = -3*50*5/16 = -46.875 kNm"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave incastro-appoggio con F in mezzeria. R_B=11F/16=34.375, R_A=5F/16=15.625, M_A=-3FL/16=-46.875."
+}

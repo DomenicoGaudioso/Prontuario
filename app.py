@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from src_code import *
+from src_code import genera_pdf_prontuario
 
 st.set_page_config(page_title="Prontuario Strutturale", layout="wide")
 st.title("Prontuario delle Travi Semplici 🏗️")
@@ -690,3 +691,39 @@ if x_mm is not None:
     st.markdown("---")
     figura = crea_4_grafici_plotly(x_mm/1000, V_n/1000, M_nmm/1000000, theta_rad*1000, v_mm)
     st.plotly_chart(figura, use_container_width=True)
+
+    # --- DOWNLOAD PDF ---
+    try:
+        parametri_input_pdf = {}
+        risultati_extra_pdf = {}
+
+        parametri_input_pdf["Luce L"] = f"{L_m:.2f} m"
+        parametri_input_pdf["Modulo E"] = f"{E_mpa:.0f} MPa"
+        parametri_input_pdf["Inerzia I"] = f"{I_cm4:.1f} cm4"
+
+        if 'q_kn' in dir():
+            parametri_input_pdf["Carico q"] = f"{q_kn:.2f} kN/m"
+        if 'F_kn' in dir():
+            parametri_input_pdf["Forza F"] = f"{F_kn:.2f} kN"
+        if 'M0_knm' in dir():
+            parametri_input_pdf["Momento M0"] = f"{M0_knm:.2f} kNm"
+        if 'a_m' in dir() and a_m > 0:
+            parametri_input_pdf["Distanza a"] = f"{a_m:.2f} m"
+        if 'f_m' in dir() and f_m > 0:
+            parametri_input_pdf["Freccia f"] = f"{f_m:.2f} m"
+
+        if 'H_n' in dir():
+            risultati_extra_pdf["Spinta Orizzontale H"] = f"{H_n/1000:.2f} kN"
+        if 'Kd' in dir():
+            risultati_extra_pdf["Fattore Amplificazione Kd"] = f"{Kd:.2f}"
+            risultati_extra_pdf["Forza Dinamica Feq"] = f"{Feq/1000:.2f} kN"
+
+        pdf_bytes = genera_pdf_prontuario(vincolo, carico, parametri_input_pdf, risultati_extra_pdf, x_mm/1000, V_n, M_nmm, theta_rad, v_mm, L_m)
+        st.download_button(
+            label="📄 Scarica Relazione PDF",
+            data=pdf_bytes,
+            file_name="relazione_prontuario.pdf",
+            mime="application/pdf"
+        )
+    except Exception as e:
+        st.warning(f"Generazione PDF non disponibile: {e}")

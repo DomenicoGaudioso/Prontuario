@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "verifica": "Urto dinamico su mensola",
+    "norma": "Meccanica delle Strutture - Dinamica",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 3.0,
+    "massa_kg": 500.0,
+    "h_caduta": 0.05,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "F_statica": {
+      "valore": 4905.0,
+      "unita": "N",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Forza statica = massa * g = 500 * 9.81 = 4905 N"
+    },
+    "K_d_ordine": {
+      "valore": 20.0,
+      "unita": "adimensionale",
+      "tolleranza_percentuale": 50.0,
+      "nota": "Coefficiente dinamico K_d = 1 + sqrt(1 + 2*h/v_st). L'ordine di grandezza dipende dalla freccia statica."
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Urto su mensola: massa 500 kg, caduta h=0.05m. Verifica che K_d > 1 e F_eq > F_statica."
+}

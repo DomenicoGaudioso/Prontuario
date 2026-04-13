@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Trave continua 2 campate - carico parziale prima campata",
+    "norma": "Meccanica delle Strutture - Trave continua",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 5.0,
+    "q": 20.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "M_B": {
+      "valore": 31.25,
+      "unita": "kNm",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Momento su B = -q*L^2/16 = -20*25/16 = -31.25 kNm"
+    },
+    "R_A": {
+      "valore": 43.75,
+      "unita": "kN",
+      "tolleranza_percentuale": 1.0,
+      "nota": "R_A = 7*q*L/16 = 7*20*5/16 = 43.75 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave continua 2 campate uguali L=5m, carico q=20 kN/m solo sulla prima campata. M_B=-qL^2/16."
+}

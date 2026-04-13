@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "verifica": "Incastro-incastro con carico distribuito",
+    "norma": "Meccanica delle Strutture - Trave iperstatica",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 5.0,
+    "q": 20.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_appoggi": {
+      "valore": 50.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione agli appoggi = q*L/2 = 20*5/2 = 50 kN ciascuno"
+    },
+    "M_incastro": {
+      "valore": 41.67,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento all'incastro = -q*L^2/12 = -20*25/12 = -41.67 kNm"
+    },
+    "M_mezzeria": {
+      "valore": 20.83,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento in mezzeria = +q*L^2/24 = +20*25/24 = +20.83 kNm"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave incastro-incastro con q=20 kN/m, L=5m. M(0)=-41.67, M(L/2)=+20.83."
+}

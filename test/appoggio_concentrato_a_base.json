@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "verifica": "Trave appoggiata con carico concentrato generico a distanza 'a'",
+    "norma": "Meccanica delle Strutture",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 6.0,
+    "F": 30.0,
+    "a": 2.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_A": {
+      "valore": 20.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione A = F*b/L = 30*4/6 = 20 kN (b = L-a = 4)"
+    },
+    "M_sotto_carico": {
+      "valore": 40.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Momento sotto il carico = F*a*b/L = 30*2*4/6 = 40 kNm"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave appoggiata L=6m, F=30 kN a distanza a=2m da A. b=4m. V per x<a: F*b/L=20 kN."
+}

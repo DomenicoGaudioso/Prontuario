@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Trave appoggiata con carico concentrato in mezzeria",
+    "norma": "Meccanica delle Strutture",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 5.0,
+    "F": 40.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_A": {
+      "valore": 20.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione A = F/2 = 40/2 = 20 kN"
+    },
+    "M_max": {
+      "valore": 50.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Momento in mezzeria = F*L/4 = 40*5/4 = 50 kNm"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso classico: trave appoggiata con F in mezzeria. M_max = F*L/4 = 50 kNm."
+}

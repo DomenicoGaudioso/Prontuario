@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "verifica": "Ponte sospeso con carico uniforme",
+    "norma": "Meccanica delle Strutture - Ponti sospesi",
+    "fonte": "Calcolo manuale - fune parabolica + impalcato",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 200.0,
+    "f_sag": 20.0,
+    "q": 10.0,
+    "n_campate": 10,
+    "E": 210000000.0,
+    "I": 10000000.0
+  },
+  "risultati_attesi": {
+    "H_fune": {
+      "valore": 2500.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Spinta orizzontale fune: H = q*L^2/(8*f_sag) = 10*40000/(8*20) = 400000/160 = 2500 kN"
+    },
+    "T_max_fune": {
+      "valore": 2692.6,
+      "unita": "kN",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Trazione massima fune: T_max = sqrt(H^2 + V^2) = sqrt(2500^2 + 1000^2) = sqrt(6250000+1000000) = sqrt(7250000) = 2692.6 kN dove V=q*L/2=1000 kN"
+    },
+    "S_pendino": {
+      "valore": 200.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Sforzo su singolo pendino S = q*L1 = q*L/n_campate = 10*20 = 200 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Ponte sospeso con L=200m, freccia f=20m, q=10 kN/m, 10 campate. H_fune = qL^2/(8f) = 2500 kN. V_appoggi = qL/2 = 1000 kN. T_max = sqrt(2500^2+1000^2) = 2692.6 kN."
+}

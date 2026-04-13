@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "verifica": "Trave appoggiata-appoggiata con carico uniformemente distribuito",
+    "norma": "Meccanica delle Strutture - Caso classico isostatico",
+    "fonte": "Timoshenko & Gere, Mechanics of Materials, Chap. 6",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 6.0,
+    "q": 10.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_A": {
+      "valore": 30.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione A = q*L/2 = 10*6/2 = 30 kN"
+    },
+    "R_B": {
+      "valore": 30.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione B = q*L/2 = 30 kN"
+    },
+    "M_max": {
+      "valore": 45.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Momento massimo in mezzeria = q*L^2/8 = 10*36/8 = 45 kNm"
+    },
+    "V_max": {
+      "valore": 30.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Taglio massimo all'appoggio = q*L/2 = 30 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso base noto: trave appoggiata-appoggiata L=6m, q=10 kN/m. M_max = 45 kNm, V_max = 30 kN."
+}

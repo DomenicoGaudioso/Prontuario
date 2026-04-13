@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "verifica": "Arco a 3 cerniche con carico concentrato in chiave",
+    "norma": "Meccanica delle Strutture - Archi",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 20.0,
+    "f": 4.0,
+    "F": 100.0,
+    "E": 30000000.0,
+    "I": 27000000.0
+  },
+  "risultati_attesi": {
+    "H_spinta": {
+      "valore": 125.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Spinta orizzontale H = F*L/(4*f) = 100*20/(4*4) = 125 kN"
+    },
+    "V_reazioni": {
+      "valore": 50.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Reazione verticale = F/2 = 50 kN"
+    },
+    "M_chiave": {
+      "valore": 0.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento in chiave = 0 per arco a 3 cerniche con carico in chiave"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Arco a 3 cerniche con L=20m, f=4m, F=100 kN in chiave. H=125 kN. M_chiave=0."
+}

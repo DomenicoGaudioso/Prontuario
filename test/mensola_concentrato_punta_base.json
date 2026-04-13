@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Mensola con carico concentrato in punta",
+    "norma": "Meccanica delle Strutture - Caso classico mensola",
+    "fonte": "Timoshenko & Gere, Mechanics of Materials",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 3.0,
+    "F": 20.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "M_incastro": {
+      "valore": 60.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Momento all'incastro = -F*L = -20*3 = -60 kNm (negativo per convenzione strutturale). A x=0: M=-60"
+    },
+    "V_costante": {
+      "valore": 20.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Taglio costante = F = 20 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso base: mensola L=3m, F=20 kN in punta. M_incastro = -60 kNm, V = 20 kN costante."
+}

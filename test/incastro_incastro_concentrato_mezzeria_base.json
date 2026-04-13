@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "verifica": "Trave incastro-incastro con carico concentrato in mezzeria",
+    "norma": "Meccanica delle Strutture - Trave iperstatica",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 4.0,
+    "F": 100.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_appoggi": {
+      "valore": 50.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Reazioni = F/2 = 50 kN ciascuna"
+    },
+    "M_incastri": {
+      "valore": 50.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento agli incastri = -F*L/8 = -100*4/8 = -50 kNm"
+    },
+    "M_mezzeria": {
+      "valore": 25.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento netto in mezzeria = +F*L/8 = +50 kNm (M_totale = FL/4 - FL/8 = FL/8 = 50 kNm)"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave incastro-incastro L=4m, F=100 kN in mezzeria. R=F/2=50kN. M(incastro)=-50. M(mezzeria)=+50."
+}

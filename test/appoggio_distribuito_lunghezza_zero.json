@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "verifica": "Trave appoggiata-appoggiata - Edge case L molto piccolo",
+    "norma": "Meccanica delle Strutture - limiti",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 0.001,
+    "q": 10.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "M_max_ordine": {
+      "valore": 1.25e-06,
+      "unita": "kNm",
+      "tolleranza_percentuale": 10.0,
+      "nota": "M_max = q*L^2/8 = 10*1e-6/8 ≈ 1.25e-6 kNm (trascurabile). Verifica che l'app non divida per zero."
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso degenere: luce quasi zero. Verifica robustezza numerica."
+}

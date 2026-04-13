@@ -629,7 +629,134 @@ def calc_cavo_parabolico(L, f_sag, q, E, A):
     
     theta = np.zeros_like(x)
     v = (q * x * (L - x)) / (2 * H) # Profilo geometrico
-    return x, V, M, theta, v, H, T_trazione
+return x, V, M, theta, v, H, T_trazione
+
+
+# ==========================================
+# FUNZIONE GENERAZIONE PDF - PRONTUARIO
+# ==========================================
+
+def _draw_4_diagrammi_matplotlib(x_m, V, M, theta, v):
+    fig, axes = plt.subplots(4, 1, figsize=(14, 10), sharex=True)
+    titles = ["Taglio V(x) [kN]", "Momento M(x) [kNm]", "Rotazione theta(x) [mrad]", "Deformata v(x) [mm]"]
+    datas = [V / 1000, M / 1000000, theta * 1000, v]
+    colors = ['#e74c3c', '#2980b9', '#8e44ad', '#27ae60']
+    for i, (ax, data, title, color) in enumerate(zip(axes, datas, titles, colors)):
+        ax.plot(x_m, data, color=color, linewidth=1.5)
+        ax.fill_between(x_m, data, 0, alpha=0.2, color=color)
+        ax.set_title(title, fontsize=10, fontweight='bold')
+        ax.grid(True, linewidth=0.3)
+        ax.axhline(0, color='black', linewidth=0.5)
+        if i in [1, 3]:
+            ax.invert_yaxis()
+    axes[-1].set_xlabel("Lunghezza Trave (m)", fontsize=10)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+def _draw_schema_matplotlib(vincolo, carico, L_m):
+    fig, ax = plt.subplots(1, 1, figsize=(7, 2.5))
+    ax.plot([0, L_m], [0, 0], 'k-', linewidth=4)
+    if vincolo in ["Appoggio - Appoggio"]:
+        for pos in [0, L_m]:
+            ax.plot(pos, -0.08, 'k^', markersize=8)
+    elif "Mensola" in vincolo:
+        ax.fill_betweenx([-0.15, 0.15], -L_m*0.03, 0, color='gray', alpha=0.5)
+    elif "Incastro" in vincolo and "Appoggio" in vincolo:
+        ax.fill_betweenx([-0.15, 0.15], -L_m*0.03, 0, color='gray', alpha=0.5)
+        ax.plot(L_m, -0.08, 'k^', markersize=8)
+    elif vincolo == "Incastro - Incastro":
+        ax.fill_betweenx([-0.15, 0.15], -L_m*0.03, 0, color='gray', alpha=0.5)
+        ax.fill_betweenx([-0.15, 0.15], L_m, L_m*1.03, color='gray', alpha=0.5)
+    ax.set_title(f"Schema: {vincolo}", fontsize=10, fontweight='bold')
+    ax.axis('off')
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+def _header_footer_prontuario(canvas, doc):
+    canvas.saveState()
+    pagina = doc.page
+    larghezza, altezza = A4
+    canvas.setStrokeColor(HexColor("#2C3E50"))
+    canvas.setLineWidth(0.8)
+    canvas.line(15*mm, altezza - 12*mm, larghezza - 15*mm, altezza - 12*mm)
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.setFillColor(HexColor("#2C3E50"))
+    canvas.drawString(15*mm, altezza - 10*mm, "Prontuario Strutturale")
+    canvas.setFont("Helvetica", 8)
+    canvas.drawRightString(larghezza - 15*mm, altezza - 10*mm, "Relazione di Calcolo")
+    canvas.line(15*mm, 10*mm, larghezza - 15*mm, 10*mm)
+    canvas.setFont("Helvetica", 7)
+    canvas.drawString(15*mm, 6*mm, f"Generato il {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    canvas.drawRightString(larghezza - 15*mm, 6*mm, f"Pagina {pagina}")
+    canvas.restoreState()
+
+
+def genera_pdf_prontuario(vincolo, carico, parametri_input, risultati_extra, x_m, V, M, theta, v, L_m=0.0):
+    buf_pdf = io.BytesIO()
+    doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm, topMargin=18*mm, bottomMargin=18*mm)
+    styles = getSampleStyleSheet()
+    style_title = ParagraphStyle('SezTitle', parent=styles['Heading2'], backColor=HexColor("#2C3E50"), textColor=white, fontName='Helvetica-Bold', fontSize=12, spaceAfter=2*mm, spaceBefore=6*mm, leftIndent=2*mm, borderPadding=(2*mm, 2*mm, 2*mm, 2*mm))
+    style_normal = styles['Normal']
+    style_formula_label = ParagraphStyle('FLabel', parent=styles['Normal'], fontName='Helvetica-Oblique', fontSize=9, textColor=HexColor("#555555"))
+    style_formula_val = ParagraphStyle('FVal', parent=styles['Normal'], fontName='Courier-Bold', fontSize=9, backColor=HexColor("#F0F0F0"), borderPadding=3, leftIndent=4*mm)
+    story = []
+
+    modello = f"{vincolo} - {carico}"
+    story.append(Spacer(1, 30*mm))
+    story.append(Paragraph("Prontuario delle Travi Semplici", ParagraphStyle('BigTitle', parent=styles['Title'], fontSize=22, fontName='Helvetica-Bold', textColor=HexColor("#2C3E50"))))
+    story.append(Spacer(1, 5*mm))
+    story.append(Paragraph("Relazione di Calcolo Strutturale", ParagraphStyle('SubTitle', parent=styles['Normal'], fontSize=14, fontName='Helvetica', textColor=HexColor("#555555"))))
+    story.append(Spacer(1, 10*mm))
+    story.append(Paragraph(f"<b>Schema Statico:</b> {modello}", style_normal))
+    story.append(Paragraph(f"<b>Luce:</b> {L_m:.2f} m", style_normal))
+    story.append(Spacer(1, 5*mm))
+    story.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", style_normal))
+    story.append(PageBreak())
+
+    story.append(Paragraph("1. Parametri di Input", style_title))
+    story.append(Paragraph(f"<i>Schema: {modello}</i>", style_formula_label))
+    story.append(Spacer(1, 3*mm))
+    data_rows = [[Paragraph("<b>Parametro</b>", style_normal), Paragraph("<b>Valore</b>", style_normal), Paragraph("<b>Unita</b>", style_normal)]]
+    unit_map = {"L": "m", "q": "kN/m", "F": "kN", "E": "MPa", "I": "cm4", "f": "m", "a": "m", "M0": "kNm", "M": "kNm", "delta": "mm", "deltaT": "C", "h": "mm", "alpha": "1/C", "Massa": "kg", "h_caduta": "m", "phi": "rad", "L1": "m", "L2": "m", "L3": "m"}
+    for nome, valore in parametri_input.items():
+        um = ""
+        for key, val in unit_map.items():
+            if key.lower() in nome.lower():
+                um = val
+                break
+        data_rows.append([nome, str(valore), um])
+    tab_style = TableStyle([('BACKGROUND', (0, 0), (-1, 0), HexColor("#2C3E50")), ('TEXTCOLOR', (0, 0), (-1, 0), white), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 9), ('ALIGN', (1, 0), (-1, -1), 'CENTER'), ('GRID', (0, 0), (-1, -1), 0.4, HexColor("#CCCCCC")), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor("#F2F2F2")])])
+    story.append(Table(data_rows, colWidths=[60*mm, 55*mm, 30*mm], style=tab_style))
+    story.append(Spacer(1, 4*mm))
+
+    if risultati_extra:
+        story.append(Paragraph("2. Risultati Principali", style_title))
+        data_res = [[Paragraph("<b>Grandezza</b>", style_normal), Paragraph("<b>Valore</b>", style_normal)]]
+        for nome, valore in risultati_extra.items():
+            data_res.append([nome, str(valore)])
+        story.append(Table(data_res, colWidths=[80*mm, 65*mm], style=tab_style))
+        story.append(Spacer(1, 4*mm))
+
+    sezione_num = "3" if risultati_extra else "2"
+    story.append(Paragraph(f"{sezione_num}. Diagrammi delle Sollecitazioni", style_title))
+    story.append(Paragraph(f"<i>Taglio V, Momento M, Rotazione theta, Deformata v</i>", style_formula_label))
+    story.append(Spacer(1, 3*mm))
+    buf_diag = _draw_4_diagrammi_matplotlib(x_m, V, M, theta, v)
+    story.append(Image(buf_diag, width=170*mm, height=120*mm))
+
+    doc.build(story, onFirstPage=_header_footer_prontuario, onLaterPages=_header_footer_prontuario)
+    buf_pdf.seek(0)
+    return buf_pdf
 
 # 36. Trave Continua su 3 appoggi (2 campate identiche di luce L)
 def calc_trave_continua_2_campate(L, q, E, I):

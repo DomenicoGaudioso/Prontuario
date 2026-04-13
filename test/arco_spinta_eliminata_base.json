@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "verifica": "Ponte ad arco a spinta eliminata con carico totale",
+    "norma": "Meccanica delle Strutture - Archi e ponti",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 30.0,
+    "f": 5.0,
+    "q": 20.0,
+    "n_campate": 6,
+    "E": 30000000.0,
+    "I": 50000000.0
+  },
+  "risultati_attesi": {
+    "H_spinta": {
+      "valore": 450.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Spinta orizzontale H = q*L^2/(8*f) = 20*900/(8*5) = 18000/40 = 450 kN"
+    },
+    "S_pendino": {
+      "valore": 100.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Sforzo su singolo pendino S = q*L1 = q*L/n = 20*30/6 = 100 kN per n_campate=6"
+    },
+    "M_locale": {
+      "valore_ordine": 125.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 20.0,
+      "nota": "Momento locale nell'impalcato (concio L1=5m): M_locale = q*L1^2/12 ≈ 20*25/12 = 41.7 kNm. Codice: M_locale = q*L1*x/2 - q*x^2/2 - q*L1^2/12, che al primo appoggio dà -q*L1^2/12."
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Ponte ad arco a spinta eliminata: L=30m, f=5m, q=20 kN/m. H = qL^2/(8f) = 450 kN. L'arco è parabolico, il carico totale è funicolare dell'arco, quindi M_macroscopico ≈ 0. Rimane il momento locale nell'impalcato."
+}

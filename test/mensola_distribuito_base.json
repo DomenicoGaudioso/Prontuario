@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Mensola con carico distribuito uniforme",
+    "norma": "Meccanica delle Strutture",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 4.0,
+    "q": 15.0,
+    "E": 30000000.0,
+    "I": 54000000.0
+  },
+  "risultati_attesi": {
+    "M_incastro": {
+      "valore": 120.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.1,
+      "nota": "M(x=0) = -q*L^2/2 = -15*16/2 = -120 kNm"
+    },
+    "R_incastro": {
+      "valore": 60.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "V(x=0) = q*L = 15*4 = 60 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Mensola L=4m, q=15 kN/m. V(0)=60 kN, M(0)=-120 kNm."
+}

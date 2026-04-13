@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "verifica": "Ponte Langer con carico totale",
+    "norma": "Meccanica delle Strutture - Ponti ad arco",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 30.0,
+    "f": 5.0,
+    "q": 20.0,
+    "E": 30000000.0,
+    "I": 50000000.0
+  },
+  "risultati_attesi": {
+    "H_spinta": {
+      "valore": 450.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Spinta = q*L^2/(8*f) = 20*900/(8*5) = 450 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Ponte Langer con carico totale: L=30m, f=5m, q=20 kN/m. H=450 kN. Momento flettente macroscopico = 0."
+}

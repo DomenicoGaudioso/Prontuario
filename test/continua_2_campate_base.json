@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Trave continua 2 campate uguali con carico uniforme",
+    "norma": "Meccanica delle Strutture - Trave continua",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 5.0,
+    "q": 20.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "R_A": {
+      "valore": 37.5,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "R_A = 3*q*L/8 = 3*20*5/8 = 37.5 kN"
+    },
+    "R_B": {
+      "valore": 125.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "R_B = 10*q*L/8 = 10*20*5/8 = 125 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave continua 2 campate L=5m, q=20kN/m. R_A=37.5, R_B=125, R_C=37.5."
+}

@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "verifica": "Incastro-appoggio con carico distribuito",
+    "norma": "Meccanica delle Strutture - Trave iperstatica",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 6.0,
+    "q": 12.0,
+    "E": 21000000.0,
+    "I": 83560000.0
+  },
+  "risultati_attesi": {
+    "M_incastro": {
+      "valore": 54.0,
+      "unita": "kNm",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Momento all'incastro = -q*L^2/8 = -12*36/8 = -54 kNm"
+    },
+    "R_appoggio": {
+      "valore": 45.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.5,
+      "nota": "Reazione all'appoggio B = 5*q*L/8 = 5*12*6/8 = 45 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Trave incastro-appoggio, L=6m, q=12 kN/m. M_incastro = -54 kNm. R_B = 45 kN."
+}

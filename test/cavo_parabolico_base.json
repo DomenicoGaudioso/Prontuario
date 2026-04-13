@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "verifica": "Cavo sospeso (funicolare parabolico) con carico distribuito",
+    "norma": "Meccanica delle Strutture - Cavi",
+    "fonte": "Calcolo manuale",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 100.0,
+    "f_sag": 10.0,
+    "q": 5.0,
+    "E": 200000000.0,
+    "A": 0.005
+  },
+  "risultati_attesi": {
+    "H_spinta": {
+      "valore": 625.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "H = q*L^2/(8*f) = 5*10000/(8*10) = 625 kN"
+    },
+    "V_appoggi": {
+      "valore": 250.0,
+      "unita": "kN",
+      "tolleranza_percentuale": 0.1,
+      "nota": "Componente verticale agli appoggi = q*L/2 = 250 kN"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Cavo sospeso L=100m, freccia f=10m, q=5 kN/m. H=625kN. V=250 kN."
+}

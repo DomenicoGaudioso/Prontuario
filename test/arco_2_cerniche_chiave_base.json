@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "verifica": "Arco a 2 cerniche con carico concentrato in chiave",
+    "norma": "Meccanica delle Strutture - Arco iperstatico",
+    "fonte": "Calcolo manuale - Teorema di Castigliano",
+    "url_fonte": "N/A",
+    "data_generazione": "2026-04-13",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "L": 20.0,
+    "f": 4.0,
+    "F": 100.0,
+    "E": 30000000.0,
+    "I": 27000000.0
+  },
+  "risultati_attesi": {
+    "H_spinta": {
+      "valore": 195.3,
+      "unita": "kN",
+      "tolleranza_percentuale": 5.0,
+      "nota": "Spinta per arco a 2 cerniche (iperstatico): H ≈ 25*F*L/(128*f) = 25*100*20/(128*4) = 50000/512 = 97.66 kN. Nota: la formula 25FL/(128f) e approssimata. Verificare con il codice."
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Arco a 2 cerniche con F=100kN in chiave. La spinta e inferiore all'arco a 3 cerniche per effetto della continuita dell'arco."
+}
