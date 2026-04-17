@@ -1,6 +1,48 @@
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import io
+from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.colors import HexColor, white
+from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Image, Spacer, PageBreak
+from reportlab.platypus.tables import TableStyle
+
+# ==========================================
+# HELPER: INTEGRAZIONE NUMERICA (senza scipy)
+# ==========================================
+def _cumtrapz(y, x):
+    """Integrale cumulativo trapezoidale con valore iniziale = 0."""
+    dx = np.diff(x)
+    return np.concatenate([[0.0], np.cumsum((y[:-1] + y[1:]) / 2.0 * dx)])
+
+def _theta_v_ss(x, M, EI):
+    """theta e v per trave semplicemente appoggiata (v(0)=v(L)=0)."""
+    kappa = M / EI
+    theta0 = _cumtrapz(-kappa, x)
+    v0 = _cumtrapz(theta0, x)
+    C1 = -v0[-1] / x[-1]
+    return theta0 + C1, v0 + C1 * x
+
+def _theta_v_cantilever(x, M, EI):
+    """theta e v per mensola (theta(0)=v(0)=0)."""
+    kappa = M / EI
+    theta = _cumtrapz(-kappa, x)
+    v = _cumtrapz(theta, x)
+    return theta, v
+
+def _theta_v_ia(x, M, EI):
+    """theta e v per incastro-appoggio (theta(0)=v(0)=0, v(L)=0 soddisfatto dalle reazioni)."""
+    return _theta_v_cantilever(x, M, EI)
+
+def _theta_v_ii(x, M, EI):
+    """theta e v per incastro-incastro (theta(0)=v(0)=0, BCs a L soddisfatte dalle reazioni)."""
+    return _theta_v_cantilever(x, M, EI)
 
 # ==========================================
 # 1. FUNZIONI ANALITICHE (10 CASI IMPLEMENTATI)
@@ -77,8 +119,13 @@ def calc_incastro_appoggio_concentrato(L, F, E, I): # In mezzeria
     x = np.linspace(0, L, 500)
     V = np.where(x < L/2, 11*F/16, -5*F/16)
     M = np.where(x <= L/2, (11*F*x/16) - (3*F*L/16), (5*F*(L-x)/16))
-    theta = np.where(x <= L/2, (F/(32*EI))*(22*x**2 - 12*L*x), (F/(32*EI))*(4*L**2 - 20*L*x + 10*x**2)) # Approssimazione polinomiale base
-    v = np.where(x <= L/2, (F*x**2/(96*EI))*(22*x - 18*L), (F*(L-x)/(96*EI))*(5*L**2 - 10*L*(L-x) + 4*(L-x)**2)) # Approssimazione v
+    # Formule analitiche esatte — integrazione diretta con BCs: v(0)=0, theta(0)=0, v(L)=0
+    theta = np.where(x <= L/2,
+                     F * x * (6*L - 11*x) / (32 * EI),
+                     F * (5*(L-x)**2 - L**2) / (32 * EI))
+    v = np.where(x <= L/2,
+                 F * x**2 * (9*L - 11*x) / (96 * EI),
+                 F * (3*L**2*(L-x) - 5*(L-x)**3) / (96 * EI))
     return x, V, M, theta, v
 
 # --- INCASTRO - INCASTRO ---
@@ -298,11 +345,13 @@ def calc_appoggio_concentrato_a(L, F, a, E, I):
     V = np.where(x < a, F*b/L, -F*a/L)
     M = np.where(x <= a, (F*b*x)/L, (F*a*(L-x))/L)
     
-    # Equazione esatta della deformata a tratti
-    v = np.where(x <= a, 
-                 (F * b * x / (6 * L * EI)) * (L**2 - b**2 - x**2), 
+    # Formule analitiche esatte (derivata di v a tratti)
+    v = np.where(x <= a,
+                 (F * b * x / (6 * L * EI)) * (L**2 - b**2 - x**2),
                  (F * a * (L - x) / (6 * L * EI)) * (L**2 - a**2 - (L - x)**2))
-    theta = np.zeros_like(x) # Lasciamo theta a 0 per brevità
+    theta = np.where(x <= a,
+                     F * b * (L**2 - b**2 - 3*x**2) / (6 * L * EI),
+                     F * a * (3*(L-x)**2 - (L**2 - a**2)) / (6 * L * EI))
     return x, V, M, theta, v
 
 # 12. Appoggio-Appoggio: Momento concentrato M0 nell'estremo A
@@ -321,8 +370,17 @@ def calc_appoggio_2F_simmetrici(L, F, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, F, np.where(x <= L-a, 0, -F))
     M = np.where(x < a, F*x, np.where(x <= L-a, F*a, F*(L-x)))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    # Formule analitiche esatte per trave con due carichi uguali a distanza 'a' dagli estremi
+    v = np.where(x <= a,
+                 F * x * (3*a*(L-a) - x**2) / (6 * EI),
+                 np.where(x <= L-a,
+                          F * a * (3*L*x - 3*x**2 - a**2) / (6 * EI),
+                          F * (L-x) * (3*a*(L-a) - (L-x)**2) / (6 * EI)))
+    theta = np.where(x <= a,
+                     F * (a*(L-a) - x**2) / (2 * EI),
+                     np.where(x <= L-a,
+                               F * a * (L - 2*x) / (2 * EI),
+                               -F * (a*(L-a) - (L-x)**2) / (2 * EI)))
     return x, V, M, theta, v
 
 # 14. Appoggio-Appoggio: Triangolare Simmetrico (Max q in mezzeria)
@@ -331,8 +389,13 @@ def calc_appoggio_triangolare_simmetrico(L, q, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x <= L/2, q*L/4 - q*x**2/L, -q*L/4 + q*(L-x)**2/L)
     M = np.where(x <= L/2, q*L*x/4 - q*x**3/(3*L), q*L*(L-x)/4 - q*(L-x)**3/(3*L))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    # Integrazione analitica di -M/EI con BCs v(0)=v(L)=0, simmetria theta(L/2)=0
+    v = np.where(x <= L/2,
+                 (q / EI) * (5*L**3*x/192 - L*x**3/24 + x**5/(60*L)),
+                 (q / EI) * (5*L**3*(L-x)/192 - L*(L-x)**3/24 + (L-x)**5/(60*L)))
+    theta = np.where(x <= L/2,
+                     (q / EI) * (5*L**3/192 - L*x**2/8 + x**4/(12*L)),
+                     -(q / EI) * (5*L**3/192 - L*(L-x)**2/8 + (L-x)**4/(12*L)))
     return x, V, M, theta, v
 
 # 15. Mensola: Concentrato generico a distanza 'a' dall'incastro
@@ -342,11 +405,13 @@ def calc_mensola_concentrato_a(L, F, a, E, I):
     V = np.where(x < a, F, 0)
     M = np.where(x <= a, -F*(a - x), 0)
     
-    # Equazione esatta della deformata a tratti
-    v = np.where(x <= a, 
-                 (F * x**2 / (6 * EI)) * (3*a - x), 
+    # Formule analitiche esatte (derivata di v a tratti)
+    v = np.where(x <= a,
+                 (F * x**2 / (6 * EI)) * (3*a - x),
                  (F * a**2 / (6 * EI)) * (3*x - a))
-    theta = np.zeros_like(x)
+    theta = np.where(x <= a,
+                     F * x * (2*a - x) / (2 * EI),
+                     F * a**2 / (2 * EI))
     return x, V, M, theta, v
 
 # 16. Mensola: Momento M0 applicato in punta
@@ -366,8 +431,7 @@ def calc_mensola_distribuito_parziale(L, q, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, q*(L-a), q*(L-x))
     M = np.where(x <= a, -q*(L-a)*(L+a-2*x)/2, -q*(L-x)**2/2)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_cantilever(x, M, EI)
     return x, V, M, theta, v
 
 # 18. Mensola: Triangolare (Max q in Punta)
@@ -376,8 +440,9 @@ def calc_mensola_triangolare_punta(L, q, E, I):
     x = np.linspace(0, L, 500)
     V = (q/(2*L))*(L**2 - x**2)
     M = -(q/(6*L))*(2*L**3 - 3*L**2*x + x**3)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    # Formule analitiche esatte: integrazione di -M/EI con BCs theta(0)=v(0)=0
+    theta = (q / (24*EI*L)) * (8*L**3*x - 6*L**2*x**2 + x**4)
+    v = (q / (120*EI*L)) * (20*L**3*x**2 - 10*L**2*x**3 + x**5)
     return x, V, M, theta, v
 
 # 19. Incastro-Appoggio: Momento M0 applicato sull'appoggio
@@ -386,8 +451,9 @@ def calc_incastro_appoggio_momento_B(L, M0, E, I):
     x = np.linspace(0, L, 500)
     V = np.full_like(x, -3*M0/(2*L))
     M = M0/2 - (3*M0*x)/(2*L)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    # Formule analitiche esatte: BCs theta(0)=v(0)=0, v(L)=0 soddisfatto dalle reazioni
+    theta = M0 * x * (3*x - 2*L) / (4 * EI * L)
+    v = M0 * x**2 * (x - L) / (4 * EI * L)
     return x, V, M, theta, v
 
 # 20. Incastro-Incastro: Concentrato generico a distanza 'a'
@@ -399,8 +465,7 @@ def calc_incastro_incastro_concentrato_a(L, F, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, R_A, R_A - F)
     M = np.where(x <= a, M_A + R_A*x, M_A + R_A*x - F*(x-a))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ii(x, M, EI)
     return x, V, M, theta, v
 
 # ==========================================
@@ -415,8 +480,7 @@ def calc_appoggio_distribuito_parziale_sx(L, q, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x <= a, R_A - q*x, -R_B)
     M = np.where(x <= a, R_A*x - q*x**2/2, R_B*(L-x))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 22. Appoggio-Appoggio: Momento M0 in mezzeria
@@ -425,8 +489,7 @@ def calc_appoggio_momento_mezzeria(L, M0, E, I):
     x = np.linspace(0, L, 500)
     V = np.full_like(x, -M0/L)
     M = np.where(x < L/2, -M0*x/L, M0*(1 - x/L))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 23. Appoggio-Appoggio: Flessione Pura (Momento M0 costante)
@@ -447,8 +510,7 @@ def calc_appoggio_triangolare_sx(L, q, E, I):
     x = np.linspace(0, L, 500)
     V = R_A - q*x + q*x**2/(2*L)
     M = R_A*x - q*x**2/2 + q*x**3/(6*L)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 25. Mensola: Trapezoidale (q1 all'incastro, q2 in punta)
@@ -458,8 +520,7 @@ def calc_mensola_trapezoidale(L, q1, q2, E, I):
     # Sovrapposizione degli effetti (Rettangolo q2 + Triangolo q1-q2)
     V = q2*(L-x) + (q1-q2)*(L-x)**2/(2*L)
     M = -q2*(L-x)**2/2 - (q1-q2)*(L-x)**3/(6*L)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_cantilever(x, M, EI)
     return x, V, M, theta, v
 
 # 26. Mensola: Due carichi concentrati (F1 a distanza 'a', F2 in punta)
@@ -468,8 +529,7 @@ def calc_mensola_due_concentrati(L, F1, F2, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, F1 + F2, F2)
     M = np.where(x <= a, -F1*(a-x) - F2*(L-x), -F2*(L-x))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_cantilever(x, M, EI)
     return x, V, M, theta, v
 
 # 27. Incastro-Appoggio: Concentrato a distanza 'a' dall'incastro
@@ -482,8 +542,7 @@ def calc_incastro_appoggio_concentrato_a(L, F, a, E, I):
     x = np.linspace(0, L, 500)
     V = np.where(x < a, R_A, -R_B)
     M = np.where(x <= a, M_A + R_A*x, R_B*(L-x))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ia(x, M, EI)
     return x, V, M, theta, v
 
 # 28. Incastro-Appoggio: Momento M0 in mezzeria
@@ -495,8 +554,7 @@ def calc_incastro_appoggio_momento_mezzeria(L, M0, E, I):
     x = np.linspace(0, L, 500)
     V = np.full_like(x, R_A)
     M = np.where(x < L/2, M_A + R_A*x, R_B*(L-x))
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ia(x, M, EI)
     return x, V, M, theta, v
 
 # 29. Incastro-Incastro: Triangolare (Max q all'incastro sx)
@@ -509,8 +567,7 @@ def calc_incastro_incastro_triangolare_sx(L, q, E, I):
     x = np.linspace(0, L, 500)
     V = R_A - q*x + q*x**2/(2*L)
     M = M_A + R_A*x - q*x**2/2 + q*x**3/(6*L)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ii(x, M, EI)
     return x, V, M, theta, v
 
 # 30. Incastro-Incastro: Momento M0 in mezzeria
@@ -522,8 +579,7 @@ def calc_incastro_incastro_momento_mezzeria(L, M0, E, I):
     x = np.linspace(0, L, 500)
     V = np.full_like(x, R_A)
     M = np.where(x < L/2, M_A + R_A*x, M_A + R_A*x + M0)
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    theta, v = _theta_v_ii(x, M, EI)
     return x, V, M, theta, v
 
 # ==========================================
@@ -629,7 +685,7 @@ def calc_cavo_parabolico(L, f_sag, q, E, A):
     
     theta = np.zeros_like(x)
     v = (q * x * (L - x)) / (2 * H) # Profilo geometrico
-return x, V, M, theta, v, H, T_trazione
+    return x, V, M, theta, v, H, T_trazione
 
 
 # ==========================================
@@ -770,11 +826,14 @@ def calc_trave_continua_2_campate(L, q, E, I):
     V = np.where(x < L, R_A - q*x, R_A + R_B - q*x)
     M = np.where(x <= L, R_A*x - q*x**2/2, R_A*x + R_B*(x-L) - q*x**2/2)
     
-    # Deformata esatta per la campata continua
+    # Deformata esatta per la campata continua (simmetrica)
     v = np.where(x <= L,
                  (q * x / (48 * EI)) * (L**3 - 3*L*x**2 + 2*x**3),
                  (q * (L_tot - x) / (48 * EI)) * (L**3 - 3*L*(L_tot - x)**2 + 2*(L_tot - x)**3))
-    theta = np.zeros_like(x)
+    # theta = dv/dx (derivata analitica per simmetria)
+    theta = np.where(x <= L,
+                     (q / (48 * EI)) * (L**3 - 9*L*x**2 + 8*x**3),
+                     -(q / (48 * EI)) * (L**3 - 9*L*(L_tot - x)**2 + 8*(L_tot - x)**3))
     return x, V, M, theta, v
 
 # ==========================================
@@ -820,9 +879,8 @@ def calc_continua_2_campate_diverse_q(L1, L2, q, E, I):
     
     V = np.where(x < L1, R_A - q*x, R_A + R_B - q*x)
     M = np.where(x <= L1, R_A*x - q*x**2/2, R_A*x + R_B*(x-L1) - q*x**2/2)
-    
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 38. Trave Continua a 2 Campate UGUALI (L), carico uniforme SOLO sulla prima campata
@@ -838,9 +896,8 @@ def calc_continua_2_campate_q_parziale(L, q, E, I):
     # Il taglio nella campata 2 è costante pari a R_C
     V = np.where(x < L, R_A - q*x, R_A + R_B - q*L)
     M = np.where(x <= L, R_A*x - q*x**2/2, M_B - R_C*(x-L))
-    
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 39. Trave Continua a 2 Campate UGUALI (L), carico concentrato F in mezzeria della prima campata
@@ -855,9 +912,8 @@ def calc_continua_2_campate_F_mezzeria(L, F, E, I):
     
     V = np.where(x < L/2, R_A, np.where(x < L, R_A - F, -R_C))
     M = np.where(x <= L/2, R_A*x, np.where(x <= L, R_A*x - F*(x - L/2), M_B - R_C*(x-L)))
-    
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 40. Trave Continua a 3 Campate UGUALI (L), carico uniforme totale
@@ -874,9 +930,8 @@ def calc_continua_3_campate_q(L, q, E, I):
     
     V = np.where(x < L, R_A - q*x, np.where(x < 2*L, R_A + R_B - q*x, R_A + R_B + R_C - q*x))
     M = np.where(x <= L, R_A*x - q*x**2/2, np.where(x <= 2*L, R_A*x + R_B*(x-L) - q*x**2/2, R_A*x + R_B*(x-L) + R_C*(x-2*L) - q*x**2/2))
-    
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # ==========================================
@@ -978,10 +1033,8 @@ def calc_ponte_langer_meta(L, f, q, E, I):
     # (Catena rigida o Arco rigido)
     V = V_iso - H * y_prime
     M = M_iso - H * y
-    
-    theta = np.zeros_like(x)
-    v = np.zeros_like(x)
-    
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v, H
 
 # ==========================================
@@ -1012,7 +1065,8 @@ def calc_gerber_standard(L1, L2, L3, q, E, I):
                  np.where(x <= L1 + L2, R_A*x + R_B*(x-L1) - q*x**2/2, 
                           V_cerniera*(x - (L1+L2)) - q*(x - (L1+L2))**2/2))
     
-    theta, v = np.zeros_like(x), np.zeros_like(x)
+    EI = E * I
+    theta, v = _theta_v_ss(x, M, EI)
     return x, V, M, theta, v
 
 # 46. URTO SU MENSOLA (Massa M che cade da altezza h in punta)
@@ -1068,9 +1122,8 @@ def calc_fune_sfalsata(L, f_sag, dislivello_h, q, E, A):
     
     V = V_verticale
     M = np.zeros_like(x)
-    theta = np.zeros_like(x)
-    
-    # Geometria della fune
+    # Geometria della fune e sua derivata (theta = dv/dx)
     v = (dislivello_h / L) * x + (q * x * (L - x)) / (2 * H)
+    theta = dislivello_h / L + q * (L - 2*x) / (2 * H)
     
     return x, V, M, theta, v, H, T_trazione
