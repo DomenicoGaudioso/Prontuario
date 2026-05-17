@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from src_code import *
 from src_code import genera_pdf_prontuario
+from prontuario_word import genera_word_prontuario
 
 st.set_page_config(page_title="Prontuario Strutturale", layout="wide")
 st.title("Prontuario delle Travi Semplici 🏗️")
@@ -727,3 +728,81 @@ if x_mm is not None:
         )
     except Exception as e:
         st.warning(f"Generazione PDF non disponibile: {e}")
+
+    # --- DOWNLOAD WORD ---
+    try:
+        x_m = x_mm / 1000
+        luce_report_m = float(np.nanmax(x_m)) if len(x_m) else float(L_m)
+        parametri_input_word = {
+            "Luce L": f"{L_m:.2f} m",
+            "Luce totale calcolata": f"{luce_report_m:.2f} m",
+            "Modulo E": f"{E_mpa:.0f} MPa",
+            "Inerzia I": f"{I_cm4:.1f} cm4",
+        }
+        risultati_extra_word = {}
+
+        if 'L1_m' in dir() and L1_m > 0:
+            parametri_input_word["Luce L1"] = f"{L1_m:.2f} m"
+        if 'L2_m' in dir() and L2_m > 0:
+            parametri_input_word["Luce L2"] = f"{L2_m:.2f} m"
+        if 'L3_m' in dir() and L3_m > 0:
+            parametri_input_word["Luce L3"] = f"{L3_m:.2f} m"
+        if 'a_m' in dir() and a_m > 0:
+            parametri_input_word["Distanza a"] = f"{a_m:.2f} m"
+        if 'f_m' in dir() and f_m > 0:
+            parametri_input_word["Freccia f"] = f"{f_m:.2f} m"
+        if 'q_kn' in dir():
+            parametri_input_word["Carico q"] = f"{q_kn:.2f} kN/m"
+        if 'q1_kn' in dir():
+            parametri_input_word["Carico q1"] = f"{q1_kn:.2f} kN/m"
+        if 'q2_kn' in dir():
+            parametri_input_word["Carico q2"] = f"{q2_kn:.2f} kN/m"
+        if 'F_kn' in dir():
+            parametri_input_word["Forza F"] = f"{F_kn:.2f} kN"
+        if 'F1_kn' in dir():
+            parametri_input_word["Forza F1"] = f"{F1_kn:.2f} kN"
+        if 'F2_kn' in dir():
+            parametri_input_word["Forza F2"] = f"{F2_kn:.2f} kN"
+        if 'M0_knm' in dir():
+            parametri_input_word["Momento M0"] = f"{M0_knm:.2f} kNm"
+        if 'delta_T' in dir():
+            parametri_input_word["Gradiente termico"] = f"{delta_T:.2f} C"
+        if 'delta_mm' in dir():
+            parametri_input_word["Cedimento"] = f"{delta_mm:.2f} mm"
+        if 'h_mm' in dir():
+            parametri_input_word["Altezza sezione h"] = f"{h_mm:.2f} mm"
+        if 'alpha' in dir():
+            parametri_input_word["Coeff. termico alpha"] = f"{alpha:.6f} 1/C"
+        if 'Massa_kg' in dir():
+            parametri_input_word["Massa"] = f"{Massa_kg:.2f} kg"
+        if 'h_m' in dir():
+            parametri_input_word["Quota h"] = f"{h_m:.2f} m"
+        if 'phi_deg' in dir():
+            parametri_input_word["Rotazione imposta"] = f"{phi_deg:.2f} gradi"
+        if 'n_campate' in dir():
+            parametri_input_word["Numero campate/intervalli"] = f"{int(n_campate)}"
+
+        if 'H_n' in dir():
+            risultati_extra_word["Spinta orizzontale H"] = f"{H_n/1000:.2f} kN"
+        if 'Tmax_n' in dir():
+            risultati_extra_word["Trazione massima fune"] = f"{Tmax_n/1000:.2f} kN"
+        if 'S_n' in dir():
+            risultati_extra_word["Azione singolo pendino"] = f"{S_n/1000:.2f} kN"
+        if 'T_array' in dir():
+            risultati_extra_word["Trazione assiale massima"] = f"{np.nanmax(T_array)/1000:.2f} kN"
+        if 'Kd' in dir():
+            risultati_extra_word["Fattore amplificazione Kd"] = f"{Kd:.2f}"
+            risultati_extra_word["Forza dinamica Feq"] = f"{Feq/1000:.2f} kN"
+
+        word_bytes = genera_word_prontuario(
+            vincolo, carico, parametri_input_word, risultati_extra_word,
+            x_m, V_n, M_nmm, theta_rad, v_mm, luce_report_m
+        )
+        st.download_button(
+            label="Scarica scheda Word",
+            data=word_bytes,
+            file_name="scheda_prontuario.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except Exception as e:
+        st.warning(f"Generazione Word non disponibile: {e}")

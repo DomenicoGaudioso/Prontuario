@@ -16,6 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 import src_code as sc
+from prontuario_word import genera_word_prontuario
 
 TEST_DIR = Path(__file__).parent / "test"
 
@@ -195,6 +196,37 @@ def test_prontuario_caso(json_file: Path):
 
 
 # ── Esegui direttamente ────────────────────────────────────────────────────
+
+def test_genera_word_prontuario_docx_bytes():
+    x, V, M, theta, v = sc.calc_appoggio_distribuito(
+        L=6000.0,
+        q=10.0,
+        E=210000.0,
+        I=1000.0 * 10000.0,
+    )
+
+    docx_bytes = genera_word_prontuario(
+        "Appoggio - Appoggio",
+        "Uniformemente Distribuito",
+        {
+            "Luce L": "6.00 m",
+            "Carico q": "10.00 kN/m",
+            "Modulo E": "210000 MPa",
+            "Inerzia I": "1000.0 cm4",
+        },
+        {},
+        x / 1000.0,
+        V,
+        M,
+        theta,
+        v,
+        6.0,
+    )
+
+    assert isinstance(docx_bytes, bytes)
+    assert docx_bytes[:2] == b"PK"
+    assert len(docx_bytes) > 10_000
+
 
 if __name__ == "__main__":
     cases = sorted(TEST_DIR.glob("*.json"))
