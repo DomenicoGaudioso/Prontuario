@@ -4,11 +4,11 @@ import io
 from datetime import datetime
 from typing import Iterable
 
-import numpy as np
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt, RGBColor
 
+from prontuario_results import build_result_summary
 from src_code import _draw_4_diagrammi_matplotlib
 
 
@@ -34,32 +34,6 @@ def _add_table(document: Document, headers: Iterable[str], rows: Iterable[Iterab
         cells = table.add_row().cells
         for index, value in enumerate(row):
             _set_cell_text(cells[index], value)
-
-
-def _format_float(value: float, decimals: int = 3) -> str:
-    if not np.isfinite(value):
-        return "-"
-    return f"{value:.{decimals}f}"
-
-
-def _result_summary_rows(x_m, V, M, theta, v) -> list[list[str]]:
-    x_m = np.asarray(x_m, dtype=float)
-    V = np.asarray(V, dtype=float)
-    M = np.asarray(M, dtype=float)
-    theta = np.asarray(theta, dtype=float)
-    v = np.asarray(v, dtype=float)
-
-    index_v = int(np.nanargmax(np.abs(V)))
-    index_m = int(np.nanargmax(np.abs(M)))
-    index_theta = int(np.nanargmax(np.abs(theta)))
-    index_def = int(np.nanargmax(np.abs(v)))
-
-    return [
-        ["Taglio massimo |V|max", _format_float(abs(V[index_v]) / 1000.0, 3), "kN", _format_float(x_m[index_v], 3)],
-        ["Momento massimo |M|max", _format_float(abs(M[index_m]) / 1_000_000.0, 3), "kNm", _format_float(x_m[index_m], 3)],
-        ["Rotazione massima |theta|max", _format_float(abs(theta[index_theta]) * 1000.0, 3), "mrad", _format_float(x_m[index_theta], 3)],
-        ["Deformata massima |v|max", _format_float(abs(v[index_def]), 3), "mm", _format_float(x_m[index_def], 3)],
-    ]
 
 
 def genera_word_prontuario(
@@ -107,7 +81,11 @@ def genera_word_prontuario(
     _add_table(document, ["Parametro", "Valore"], input_rows)
 
     document.add_heading("2. Risultati di sintesi", level=2)
-    _add_table(document, ["Grandezza", "Valore", "Unita", "Ascissa x [m]"], _result_summary_rows(x_m, V, M, theta, v))
+    summary_rows = [
+        [row["Grandezza"], row["Valore"], row["Unita"], row["Ascissa x [m]"], row["Segno"]]
+        for row in build_result_summary(x_m, V, M, theta, v)
+    ]
+    _add_table(document, ["Grandezza", "Valore", "Unita", "Ascissa x [m]", "Segno"], summary_rows)
 
     if risultati_extra:
         document.add_heading("3. Risultati specifici dello schema", level=2)

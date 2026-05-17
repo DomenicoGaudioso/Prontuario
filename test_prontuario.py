@@ -7,6 +7,7 @@ analitiche di src_code.py restituiscano i valori attesi entro la tolleranza.
 Esegui con: pytest test_prontuario.py -v
 """
 from __future__ import annotations
+import ast
 import json
 import sys
 from pathlib import Path
@@ -16,9 +17,61 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 import src_code as sc
+from prontuario_results import build_result_summary
+from prontuario_schemi import MAPPA_SCHEMI, iter_menu_combinations
 from prontuario_word import genera_word_prontuario
 
 TEST_DIR = Path(__file__).parent / "test"
+APP_FILE = Path(__file__).parent / "app.py"
+
+
+def _flatten_and_conditions(node: ast.AST) -> list[ast.AST]:
+    if isinstance(node, ast.BoolOp) and isinstance(node.op, ast.And):
+        parts = []
+        for value in node.values:
+            parts.extend(_flatten_and_conditions(value))
+        return parts
+    return [node]
+
+
+def _comparison_to_string_pair(node: ast.AST) -> tuple[str | None, str | None]:
+    if not isinstance(node, ast.Compare):
+        return None, None
+    if not isinstance(node.left, ast.Name) or len(node.ops) != 1 or len(node.comparators) != 1:
+        return None, None
+    if not isinstance(node.ops[0], ast.Eq):
+        return None, None
+    comparator = node.comparators[0]
+    if not isinstance(comparator, ast.Constant) or not isinstance(comparator.value, str):
+        return None, None
+
+    if node.left.id == "vincolo":
+        return comparator.value, None
+    if node.left.id == "carico":
+        return None, comparator.value
+    return None, None
+
+
+def _implemented_app_conditions() -> tuple[set[tuple[str, str]], set[str]]:
+    tree = ast.parse(APP_FILE.read_text(encoding="utf-8"))
+    exact: set[tuple[str, str]] = set()
+    generic_vincoli: set[str] = set()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        vincolo = None
+        carico = None
+        for condition in _flatten_and_conditions(node.test):
+            maybe_vincolo, maybe_carico = _comparison_to_string_pair(condition)
+            vincolo = maybe_vincolo or vincolo
+            carico = maybe_carico or carico
+        if vincolo and carico:
+            exact.add((vincolo, carico))
+        elif vincolo:
+            generic_vincoli.add(vincolo)
+
+    return exact, generic_vincoli
 
 
 # ── Estrazione valori dal risultato della funzione ──────────────────────────
@@ -196,6 +249,45 @@ def test_prontuario_caso(json_file: Path):
 
 
 # ── Esegui direttamente ────────────────────────────────────────────────────
+
+def test_mappa_schemi_senza_carichi_duplicati():
+    for vincolo, carichi in MAPPA_SCHEMI.items():
+        assert len(carichi) == len(set(carichi)), f"Carichi duplicati per {vincolo}"
+
+
+def test_mappa_schemi_allineata_ai_blocchi_app():
+    exact, generic_vincoli = _implemented_app_conditions()
+    menu_combinations = iter_menu_combinations()
+
+    missing = {
+        (vincolo, carico)
+        for vincolo, carico in menu_combinations
+        if (vincolo, carico) not in exact and vincolo not in generic_vincoli
+    }
+    hidden = {
+        (vincolo, carico)
+        for vincolo, carico in exact
+        if (vincolo, carico) not in menu_combinations
+    }
+
+    assert not missing, f"Combinazioni nel menu senza blocco di calcolo: {sorted(missing)}"
+    assert not hidden, f"Blocchi implementati non esposti nel menu: {sorted(hidden)}"
+
+
+def test_build_result_summary_include_segno_e_ascissa():
+    x, V, M, theta, v = sc.calc_appoggio_distribuito(
+        L=6000.0,
+        q=10.0,
+        E=210000.0,
+        I=1000.0 * 10000.0,
+    )
+
+    rows = build_result_summary(x / 1000.0, V, M, theta, v)
+
+    assert [row["Grandezza"] for row in rows] == ["Vmax", "Mmax", "theta max", "vmax"]
+    assert all("Ascissa x [m]" in row for row in rows)
+    assert all(row["Segno"] in {"+", "-", "0"} for row in rows)
+
 
 def test_genera_word_prontuario_docx_bytes():
     x, V, M, theta, v = sc.calc_appoggio_distribuito(

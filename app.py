@@ -1,57 +1,16 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 from src_code import *
 from src_code import genera_pdf_prontuario
+from prontuario_results import build_result_summary
+from prontuario_schemi import MAPPA_SCHEMI
 from prontuario_word import genera_word_prontuario
 
 st.set_page_config(page_title="Prontuario Strutturale", layout="wide")
 st.title("Prontuario delle Travi Semplici 🏗️")
 
 # --- SIDEBAR ---
-# --- SIDEBAR E LOGICA DEI MENU DIPENDENTI ---
-# Dizionario che associa ad ogni vincolo solo i suoi carichi specifici
-# Dizionario che associa ad ogni vincolo solo i suoi carichi specifici
-MAPPA_SCHEMI = {
-    "Appoggio - Appoggio": [
-        "Uniformemente Distribuito", "Concentrato in Mezzeria", "Triangolare",
-        "Gradiente Termico", "Cedimento Appoggio Destro"
-    ],
-    "Mensola": [
-        "Concentrato in Punta", "Uniformemente Distribuito", "Triangolare"
-    ],
-    "Incastro - Appoggio": [
-        "Uniformemente Distribuito", "Concentrato in Mezzeria"
-    ],
-    "Incastro - Incastro": [
-        "Uniformemente Distribuito", "Concentrato in Mezzeria", 
-        "Concentrato a distanza a", "Triangolare Max Sx", "Momento in Mezzeria",
-        "Gradiente Termico", "Cedimento Verticale Appoggio"
-    ],
-    "Arco a 3 Cerniere": ["Carico in Chiave"],
-    "Arco a 2 Cerniere": ["Carico in Chiave"],
-    "Cavo Sospeso": ["Carico Distribuito (Fune)"],
-    "Trave Continua": [
-        "2 Campate con Carico Distribuito",
-        "2 Campate Diverse (Uniforme totale)", 
-        "2 Campate Uguali (Uniforme solo su campata 1)", 
-        "2 Campate Uguali (Concentrato in campata 1)", 
-        "3 Campate Uguali (Uniforme totale)"
-],
-    "Ponte Sospeso": ["Impalcato con Carico Uniforme"],
-    "Ponte ad Arco a Spinta Eliminata": ["Impalcato con Carico Uniforme"],
-    "Ponte Langer": [
-        "Catena Rigida - Carico Totale",
-        "Catena Rigida - Carico a Metà",
-        "Arco Rigido - Carico Totale",
-        "Arco Rigido - Carico a Metà"
-    ],
-"Trave Gerber": ["Uniforme totale con Cerniera"],
-    "Mensola (Urto Dinamico)": ["Caduta Massa in Punta"],
-    "Incastro - Appoggio": [
-        "Uniformemente Distribuito", "Concentrato in Mezzeria", "Rotazione Incastro"
-    ],
-    "Cavo Sospeso": ["Carico Distribuito (Fune)", "Fune con Appoggi Sfalsati"]
-}
 
 st.sidebar.header("Impostazioni Struttura")
 
@@ -693,6 +652,14 @@ if x_mm is not None:
     figura = crea_4_grafici_plotly(x_mm/1000, V_n/1000, M_nmm/1000000, theta_rad*1000, v_mm)
     st.plotly_chart(figura, use_container_width=True)
 
+    x_m = x_mm / 1000
+    st.subheader("Sintesi risultati")
+    st.dataframe(
+        pd.DataFrame(build_result_summary(x_m, V_n, M_nmm, theta_rad, v_mm)),
+        use_container_width=True,
+        hide_index=True,
+    )
+
     # --- DOWNLOAD PDF ---
     try:
         parametri_input_pdf = {}
@@ -719,7 +686,7 @@ if x_mm is not None:
             risultati_extra_pdf["Fattore Amplificazione Kd"] = f"{Kd:.2f}"
             risultati_extra_pdf["Forza Dinamica Feq"] = f"{Feq/1000:.2f} kN"
 
-        pdf_bytes = genera_pdf_prontuario(vincolo, carico, parametri_input_pdf, risultati_extra_pdf, x_mm/1000, V_n, M_nmm, theta_rad, v_mm, L_m)
+        pdf_bytes = genera_pdf_prontuario(vincolo, carico, parametri_input_pdf, risultati_extra_pdf, x_m, V_n, M_nmm, theta_rad, v_mm, L_m)
         st.download_button(
             label="📄 Scarica Relazione PDF",
             data=pdf_bytes,
@@ -731,7 +698,6 @@ if x_mm is not None:
 
     # --- DOWNLOAD WORD ---
     try:
-        x_m = x_mm / 1000
         luce_report_m = float(np.nanmax(x_m)) if len(x_m) else float(L_m)
         parametri_input_word = {
             "Luce L": f"{L_m:.2f} m",
